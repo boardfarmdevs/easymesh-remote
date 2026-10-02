@@ -131,8 +131,9 @@ Tailscale hostname carries one lab. Before a reservation the gateway also asks t
 whether a local operator holds it (`/api/demo/interactions`), so a lab without a room
 cannot be reserved as the code stands.
 
-## 6. Not checked
+## 6. Checked and not checked
 
 - No lab VM was running when this was written. The device names and guest ports are read
   from the build scripts; the host ports are the labs poster's.
-- Whether rev120, rev140 and rev150 already run Tailscale.
+- Tailscale on the hosts, checked on 2 October 2026: rev120 runs it; rev140 and rev150 do
+  not have it installed. No host has the gateway installed or configured.
