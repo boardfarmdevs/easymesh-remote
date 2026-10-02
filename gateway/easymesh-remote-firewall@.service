@@ -1,0 +1,13 @@
+[Unit]
+Description=Block direct network access around the EasyMesh %i session gateway
+After=network-online.target nftables.service
+Before=easymesh-remote@%i.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/python3 /opt/easymesh-remote/manage.py --lab %i firewall-on
+ExecStop=/usr/bin/python3 /opt/easymesh-remote/manage.py --lab %i firewall-off
+
+[Install]
+WantedBy=multi-user.target

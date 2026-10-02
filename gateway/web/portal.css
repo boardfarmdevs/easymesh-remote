@@ -1,0 +1,16 @@
+:root { color-scheme: dark; font: 14px system-ui, sans-serif; background: #15202b; color: #e9eef3; }
+body { margin: 0; height: 100vh; display: flex; flex-direction: column; }
+header { display: flex; align-items: center; gap: 14px; padding: 10px 14px; flex-wrap: wrap; border-bottom: 1px solid #546473; }
+nav { display: flex; gap: 12px; }
+a { color: #9fd3ff; }
+#status { margin-left: auto; font-variant-numeric: tabular-nums; }
+button, input { font: inherit; border-radius: 5px; padding: 7px 12px; border: 1px solid #718397; }
+button { cursor: pointer; background: #263e55; color: #fff; }
+button:disabled { opacity: .55; cursor: not-allowed; }
+input { background: #0b141d; color: #fff; }
+main { max-width: 680px; padding: 28px; margin: 4vh auto; line-height: 1.6; }
+form { display: flex; flex-direction: column; gap: 16px; max-width: 350px; }
+label { display: flex; flex-direction: column; gap: 4px; }
+#error { background: #702d23; margin: 0; padding: 10px 18px; }
+iframe { flex: 1; width: 100%; min-height: 0; border: 0; background: #fff; }
+[hidden] { display: none !important; }

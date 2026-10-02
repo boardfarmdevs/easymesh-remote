@@ -1,0 +1,27 @@
+[Unit]
+Description=Exclusive remote access to EasyMesh lab %i
+After=network-online.target tailscaled.service easymesh-remote-firewall@%i.service
+Requires=easymesh-remote-firewall@%i.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=easymesh-remote
+Group=easymesh-remote
+ExecStart=/usr/bin/python3 /opt/easymesh-remote/gateway.py --config /etc/easymesh-remote/%i.json
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=10
+UMask=0077
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=/var/lib/easymesh-remote/%i
+MemoryMax=256M
+TasksMax=64
+
+[Install]
+WantedBy=multi-user.target
