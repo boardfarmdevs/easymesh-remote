@@ -41,7 +41,7 @@ Browser -> Tailscale HTTPS -> the gateway on the host -> the lab VM's published 
 | [tests/](tests) | the gateway's tests: sessions, publication, the firewall in disposable network namespaces, the proxy, and a browser test of the portal with two accounts |
 | [docs/](docs) | the setup guide, the reference of what each lab publishes, the proposal |
 | [site/](site) | the explainer site |
-| [pages/](pages) | the site's build and the labs' shared checks |
+| [pages/](pages) | the site's build; the rest of the Pages workflow is the labs' shared one, in the umbrella |
 
 The gateway and its tests were brought here from the RDK lab
 ([meta-cmf-bananapi-vcpe](https://vcpe.dev/meta-cmf-bananapi-vcpe/), `gen/remote-access`)
@@ -56,11 +56,12 @@ step and its checks):
 ```sh
 git clone git@github.com:boardfarmdevs/easymesh-remote.git
 cd easymesh-remote
+VM=rdk-MMDD                                 # the lab's VM; the current names: the lab configurations
 sudo bash gateway/install-host.sh          # packages, the service account, the units
 sudo tailscale up
-sudo /opt/easymesh-remote/manage.py --lab rdk-1001 configure
-sudo /opt/easymesh-remote/manage.py --lab rdk-1001 add-user alice
-sudo /opt/easymesh-remote/manage.py --lab rdk-1001 publish --mode private
+sudo /opt/easymesh-remote/manage.py --lab "$VM" configure
+sudo /opt/easymesh-remote/manage.py --lab "$VM" add-user alice
+sudo /opt/easymesh-remote/manage.py --lab "$VM" publish --mode private
 ```
 
 To run the tests, on any machine:

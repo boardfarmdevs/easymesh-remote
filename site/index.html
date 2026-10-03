@@ -74,18 +74,18 @@ it. A lab needs a host with many cores and a lot of memory, so there are few hos
 runs one or two labs.</p>
 <figure class="wide" id="fig-map">
 <div class="fig">
-<svg viewBox="0 0 820 262" role="img" aria-label="Three lab hosts. rev140 runs the RDK and prplMesh optimizer labs, rev120 runs the RDK lab with EMOSA and the physical lab, rev150 runs the OpenSync lab with EMOSA. Each lab lists the web interfaces it publishes.">
+<svg viewBox="0 0 820 262" role="img" aria-label="Three lab hosts. rev140 runs the RDK and prplMesh optimizer labs, rev120 runs the RDK lab with EMOSA and the physical lab, rev150 runs the OpenSync lab with EMOSA. Each lab, named by its configuration, lists the web interfaces it publishes.">
   <rect class="box-soft" x="16" y="16" width="296" height="198" rx="12"/>
   <text class="t" x="32" y="44">rev140</text>
   <text class="xs" x="96" y="44">builds the images too</text>
   <rect class="box-radio" x="30" y="60" width="130" height="140" rx="10"/>
-  <text class="s mono" x="42" y="84">rdk-1001</text>
+  <text class="s mono" x="42" y="84">rdk-MMDD</text>
   <text class="xs" x="42" y="102">RDK lab</text>
   <text class="s" x="42" y="136">· room</text>
   <text class="s" x="42" y="158">· controller</text>
   <text class="s" x="42" y="180">· Console NG</text>
   <rect class="box-radio" x="168" y="60" width="130" height="140" rx="10"/>
-  <text class="s mono" x="180" y="84">prpl-1001</text>
+  <text class="s mono" x="180" y="84">prpl-MMDD</text>
   <text class="xs" x="180" y="102">prplMesh lab</text>
   <text class="s" x="180" y="136">· room</text>
   <text class="s" x="180" y="158">· dashboard</text>
@@ -95,7 +95,7 @@ runs one or two labs.</p>
   <text class="t" x="344" y="44">rev120</text>
   <text class="xs" x="408" y="44">the hardware is plugged in here</text>
   <rect class="box-radio" x="342" y="60" width="134" height="140" rx="10"/>
-  <text class="s mono" x="352" y="84">rdk-emosa-1001</text>
+  <text class="s mono" x="352" y="84">rdk-emosa-MMDD</text>
   <text class="xs" x="352" y="102">RDK lab + EMOSA</text>
   <text class="s" x="352" y="136">· room</text>
   <text class="s" x="352" y="158">· controller</text>
@@ -109,7 +109,7 @@ runs one or two labs.</p>
   <rect class="box-soft" x="626" y="16" width="178" height="198" rx="12"/>
   <text class="t" x="642" y="44">rev150</text>
   <rect class="box-radio" x="640" y="60" width="150" height="140" rx="10"/>
-  <text class="s mono" x="650" y="84">emosa-osl-0925</text>
+  <text class="s mono" x="650" y="84">emosa-osl-MMDD</text>
   <text class="xs" x="650" y="102">OpenSync + EMOSA</text>
   <text class="s" x="650" y="136">· controller</text>
   <text class="s" x="650" y="158">· local-noc</text>
@@ -117,13 +117,15 @@ runs one or two labs.</p>
   <text class="xs" x="16" y="242">Each line is a web interface, published as one port on its host. A lab's name carries its configuration and the date it was built.</text>
 </svg>
 </div>
-<figcaption><b>Three hosts, five labs, thirteen interfaces.</b> As they ran on 1 October 2026.
-The labs' own <a href="https://mesh.vcpe.dev/posters/labs.html">poster</a> has what runs
-inside each.</figcaption>
+<figcaption><b>Three hosts, five labs, thirteen interfaces.</b> Each lab is named by its
+configuration and the date of its build (MMDD); the current names are in the umbrella's
+<a href="https://github.com/boardfarmdevs/easymesh-labs/blob/main/docs/reference/lab-configurations.md">lab
+configurations</a>, and the labs' <a href="https://mesh.vcpe.dev/posters/labs.html">poster</a>
+has what runs inside each.</figcaption>
 </figure>
 <p>A lab publishes an interface in one way, the same in every lab: the host listens on a port
-and forwards it to the service inside the VM. The room of <code>rdk-1001</code> is port 8891
-in the VM and a port of its own on rev140. Which ports a lab has is written on the VM itself,
+and forwards it to the service inside the VM. The room of an RDK lab is port 8891
+in the VM and a port of its own on the host. Which ports a lab has is written on the VM itself,
 so a host can be asked what its labs offer.</p>
 <p>Three interfaces come back in most labs. The <strong>room</strong> is the live floor plan:
 clients move, the optimizer steers, and an operator can drag things. The
@@ -311,10 +313,11 @@ strangers, and anyone with a shell on the host is trusted completely.</p></aside
 sudo tailscale up                      # join the private network
 
 REMOTE=/opt/easymesh-remote/manage.py
-sudo $REMOTE --lab rdk-1001 configure  # find the lab's published ports; exposes nothing
-sudo $REMOTE --lab rdk-1001 add-user alice
-sudo $REMOTE --lab rdk-1001 publish --mode private
-sudo $REMOTE --lab rdk-1001 status     # the three addresses to open</code></pre>
+VM=rdk-MMDD                            # the lab's VM, as the lab configurations name it
+sudo $REMOTE --lab "$VM" configure  # find the lab's published ports; exposes nothing
+sudo $REMOTE --lab "$VM" add-user alice
+sudo $REMOTE --lab "$VM" publish --mode private
+sudo $REMOTE --lab "$VM" status     # the three addresses to open</code></pre>
 <p>Then open the portal, <code>/_remote/</code> on any of the three addresses, sign in and
 reserve. Before making a lab public, check it with two browsers and two accounts: the second
 must see "in use" and reach nothing.</p>
@@ -357,11 +360,11 @@ built.</p></aside>
 own on the private network, three things follow at once: a host can publish every lab it
 runs, sharing a name with someone shares exactly one lab, and a lab can have as many ports as
 it has interfaces.</p>
-<pre><code>https://rdk-1001.&lt;network&gt;/            the controller's interface
-https://rdk-1001.&lt;network&gt;:8443/       Console NG
-https://rdk-1001.&lt;network&gt;:10000/      the room</code></pre>
+<pre><code>https://rdk-MMDD.&lt;network&gt;/            the controller's interface
+https://rdk-MMDD.&lt;network&gt;:8443/       Console NG
+https://rdk-MMDD.&lt;network&gt;:10000/      the room</code></pre>
 <p>A lab's name already says what it is (<code>rdk</code>, <code>prpl</code>,
-<code>rdk-emosa</code>) and when it was built (<code>1001</code>). Making that name the
+<code>rdk-emosa</code>) and when it was built (<code>MMDD</code>, the month and day). Making that name the
 address means an address identifies a lab configuration without a table to look it up in.
 How to give a lab its own name with the least added to a host is the first experiment.</p>
 </section>
@@ -383,7 +386,7 @@ from.</p>
   <text class="xs" x="500" y="26">STATE</text>
   <path class="rule" d="M16 36 H804"/>
 
-  <text class="s mono" x="24" y="66">rdk-1001</text>
+  <text class="s mono" x="24" y="66">rdk-MMDD</text>
   <text class="s" x="190" y="66">RDK optimizer lab</text>
   <text class="s" x="420" y="66">rev140</text>
   <rect class="pill-good" x="500" y="50" width="52" height="24" rx="12"/>
@@ -392,7 +395,7 @@ from.</p>
   <text class="xs lbl-accent" x="752" y="66" text-anchor="middle">Reserve</text>
   <path class="rule" d="M16 86 H804"/>
 
-  <text class="s mono" x="24" y="116">prpl-1001</text>
+  <text class="s mono" x="24" y="116">prpl-MMDD</text>
   <text class="s" x="190" y="116">prplMesh optimizer lab</text>
   <text class="s" x="420" y="116">rev140</text>
   <rect class="pill-warn" x="500" y="100" width="190" height="24" rx="12"/>
@@ -401,7 +404,7 @@ from.</p>
   <text class="xs" x="752" y="116" text-anchor="middle">Watch</text>
   <path class="rule" d="M16 136 H804"/>
 
-  <text class="s mono" x="24" y="166">rdk-emosa-1001</text>
+  <text class="s mono" x="24" y="166">rdk-emosa-MMDD</text>
   <text class="s" x="190" y="166">RDK lab + EMOSA, two pods</text>
   <text class="s" x="420" y="166">rev120</text>
   <rect class="pill-warn" x="500" y="150" width="130" height="24" rx="12"/>
@@ -410,7 +413,7 @@ from.</p>
   <text class="xs" x="752" y="166" text-anchor="middle">Watch</text>
   <path class="rule" d="M16 186 H804"/>
 
-  <text class="s mono" x="24" y="216">emosa-osl-0925</text>
+  <text class="s mono" x="24" y="216">emosa-osl-MMDD</text>
   <text class="s" x="190" y="216">OpenSync + EMOSA</text>
   <text class="s" x="420" y="216">rev150</text>
   <rect class="pill-muted" x="500" y="200" width="70" height="24" rx="12"/>
@@ -455,8 +458,8 @@ one page that frames the lab's interfaces as tiles.</p>
 <svg viewBox="0 0 820 340" role="img" aria-label="A sketch of a workspace: a header with the lab's name and the reservation, and three tiles: the room, large, with the controller's topology and Console NG beside it.">
   <rect class="box" x="16" y="10" width="788" height="320" rx="12"/>
   <path class="rule" d="M16 46 H804"/>
-  <text class="s mono" x="32" y="33">rdk-1001</text>
-  <text class="xs" x="112" y="33">RDK optimizer lab · rev140 · built 1 October</text>
+  <text class="s mono" x="32" y="33">rdk-MMDD</text>
+  <text class="xs" x="120" y="33">RDK optimizer lab · rev140 · built from main</text>
   <rect class="pill-accent" x="560" y="18" width="232" height="22" rx="11"/>
   <text class="xs lbl-accent" x="676" y="33" text-anchor="middle">reserved by you · idle 9 m · limit 38 m</text>
 

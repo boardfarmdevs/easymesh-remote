@@ -68,7 +68,7 @@ the network is not the only lock.
 ### One address per lab
 
 Today a lab is reached as its host's Tailscale name on three fixed ports, so a host can
-publish one lab. If each **lab** has its own name, `rdk-1001` is an address:
+publish one lab. If each **lab** has its own name, the lab's VM name (`rdk-MMDD`) is an address:
 
 - a host publishes as many labs as it runs;
 - sharing a name shares exactly one lab;

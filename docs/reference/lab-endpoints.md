@@ -2,8 +2,10 @@
 
 [Documents](../README.md)
 
-**Kind:** reference. **Read from the labs' sources and the labs poster on:** 2 October
-2026. Host ports are the ones of the VMs that ran on that date; a rebuilt VM gets new ones.
+**Kind:** reference. **Read from the labs' sources on:** 2 October 2026. Which VM runs on
+which host, and its name, is in the umbrella's lab configurations
+([easymesh-labs](https://mesh.vcpe.dev/)); this document names no VM, because every
+rebuild renames them.
 
 Remote access starts from what a lab already offers on its host. This document lists it:
 every web interface and API of every lab configuration, how the lab publishes it, and what
@@ -17,14 +19,14 @@ addresses and a port, and forwards to the VM's address and port. Every lab does 
 way.
 
 ```sh
-lxc config device add rdk-1001 room-demo-viewer proxy nat=true \
-    listen=tcp:<host address>:29882 connect=tcp:<VM address>:8891
+lxc config device add "$VM" room-demo-viewer proxy nat=true \
+    listen=tcp:<host address>:<host port> connect=tcp:<VM address>:8891
 ```
 
 The proxy devices of a VM are therefore the list of what that lab offers. On a lab host:
 
 ```sh
-lxc query /1.0/instances/rdk-1001 | python3 -c '
+lxc query /1.0/instances/"$VM" | python3 -c '
 import json, sys
 for name, d in json.load(sys.stdin)["expanded_devices"].items():
     if d.get("type") == "proxy":
@@ -41,29 +43,29 @@ lab on its own (#3) is the base of #4 and has no VM of its own.
 
 ### RDK EasyMesh lab (#1) and RDK lab + EMOSA (#5)
 
-| Proxy device | In the VM | What it is | `rdk-1001` on rev140 | `rdk-emosa-1001` on rev120 |
-| --- | --- | --- | --- | --- |
-| `easymesh-webui` | 8888 | the controller's web interface and API (em_cli): topology, clients, steering | 29880 | 21200 |
-| `wmediumd-console` | 8890 | Console NG: the medium, live, read-only | 29881 | 21201 |
-| `room-demo-viewer` | 8891 | the room: its viewer, its API and its event stream | 29882 | 21202 |
+| Proxy device | In the VM | What it is | On the host |
+| --- | --- | --- | --- |
+| `easymesh-webui` | 8888 | the controller's web interface and API (em_cli): topology, clients, steering | the base port |
+| `wmediumd-console` | 8890 | Console NG: the medium, live, read-only | base + 1 |
+| `room-demo-viewer` | 8891 | the room: its viewer, its API and its event stream | base + 2 |
 
 The three host ports are a base and the next two; the base is derived from the VM's name
 (`EASYMESH_PORT_BASE`), so two VMs on one host do not collide.
 
 ### prplMesh lab (#2)
 
-| Proxy device | In the VM | What it is | `prpl-1001` on rev140 |
+| Proxy device | In the VM | What it is | On the host |
 | --- | --- | --- | --- |
-| `controller-ui` | 8091 | the controller dashboard | 46084 |
-| `wmediumd-console` | 8090 | Console NG | 46085 |
-| `room-demo-viewer` | 8891 | the room | 46086 |
+| `controller-ui` | 8091 | the controller dashboard | the base port |
+| `wmediumd-console` | 8090 | Console NG | base + 1 |
+| `room-demo-viewer` | 8891 | the room | base + 2 |
 
 The same scheme (`PRPLMESH_PORT_BASE`, then +1 and +2). The lab reserves base +3 for the
 LXD web interface. The topology adapter (8092 in the VM) is not published.
 
 ### OpenSync + EMOSA, prplMesh controller (#4)
 
-| Proxy device | In the VM | What it is | `emosa-osl-0925` on rev150 |
+| Proxy device | In the VM | What it is | On the host, by default |
 | --- | --- | --- | --- |
 | `em-ui` | 8093 | the EasyMesh controller's interface | 8660 |
 | `noc-ui` | 8640 | local-noc, the pods' cloud | 8640 |
@@ -72,7 +74,7 @@ No room and no Console NG: this lab has no room service.
 
 ### Physical protocol lab (#6)
 
-| Proxy device | In the VM | What it is | `easymesh-lab` on rev120 |
+| Proxy device | In the VM | What it is | On the host, by default |
 | --- | --- | --- | --- |
 | `lab-panel` | 8765 | the teaching panel | 8765 |
 | `lab-openspeedtest` | 3000 | the speed test server | 8766 |
@@ -102,7 +104,7 @@ None of these belongs behind the gateway. A remote operator reaches them over SS
 The SSH tunnel, for one interface, run on your own machine:
 
 ```sh
-ssh -N -L 127.0.0.1:8891:<host address>:29882 <user>@<host>
+ssh -N -L 127.0.0.1:8891:<host address>:<room port> <user>@<host>
 ```
 
 Then open `http://127.0.0.1:8891/`. The destination is the host's forwarded address and
@@ -133,7 +135,7 @@ cannot be reserved as the code stands.
 
 ## 6. Checked and not checked
 
-- No lab VM was running when this was written. The device names and guest ports are read
-  from the build scripts; the host ports are the labs poster's.
+- No lab VM was running when this was first written. The device names, the guest ports and
+  the default host ports are read from the build scripts.
 - Tailscale on the hosts, checked on 2 October 2026: rev120 runs it; rev140 and rev150 do
   not have it installed. No host has the gateway installed or configured.
