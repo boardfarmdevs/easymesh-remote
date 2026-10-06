@@ -37,7 +37,7 @@ Browser -> Tailscale HTTPS -> the gateway on the host -> the lab VM's published 
 
 | Part | What it is |
 | --- | --- |
-| [gateway/](gateway) | the gateway: `gateway.py` (the proxy, for HTTP, event streams and WebSockets, and the lab's page), `manage.py` (configure, the lab card, accounts and roles, publish, maintenance, firewall), `remote_state.py` (sessions and the reservation, in SQLite), `install-host.sh`, the systemd units and the lab's page (`web/`: the welcome and management window, every interface in one window) |
+| [gateway/](gateway) | the gateway: `gateway.py` (the proxy, for HTTP, event streams and WebSockets, and the lab's page), `manage.py` (configure, the lab card, accounts and roles, publish, maintenance, firewall), `remote_state.py` (sessions and the reservation, in SQLite), `install-host.sh`, the systemd units (the gateway, its firewall, the lab's own Tailscale node) and the lab's page (`web/`: the welcome and management window, every interface in one window) |
 | [tests/](tests) | the gateway's tests: sessions, publication, the firewall in disposable network namespaces, the proxy, and a browser test of the lab's page with three accounts |
 | [docs/](docs) | the setup guide, the reference of what each lab publishes, the proposal |
 | [site/](site) | the explainer site |
@@ -62,6 +62,7 @@ sudo tailscale up
 LAB=rdk                                     # the configuration: the gateway keeps it across rebuilds
 sudo /opt/easymesh-remote/manage.py --lab "$LAB" configure --vm "$VM"
 sudo /opt/easymesh-remote/manage.py --lab "$LAB" add-user alice --role admin
+sudo /opt/easymesh-remote/manage.py --lab "$LAB" address    # the lab's own Tailscale name: a link to open
 sudo /opt/easymesh-remote/manage.py --lab "$LAB" publish --mode private
 ```
 

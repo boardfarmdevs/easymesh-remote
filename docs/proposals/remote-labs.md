@@ -3,9 +3,10 @@
 [Documents](../README.md)
 
 **Status:** Proposal, partly built. What exists is the gateway ([setup](../guides/setup.md))
-for the RDK lab, published privately for `rdk-emosa` on rev120 since 6 October, and the
-lab's page of section 7 (step 6, built 6 October, with the card of section 5 shown on it).
-The rest of sections 4 to 9 is not implemented. **Prepared:** 2 October 2026.
+for the RDK lab, published privately for `rdk-emosa` on rev120 since 6 October, the
+lab's page of section 7 (step 6, built 6 October, with the card of section 5 shown on it)
+and a lab's own address of section 4 (step 3, built 6 October). The rest of sections 4 to
+9 is not implemented. **Prepared:** 2 October 2026.
 
 ## 1. The goal
 
@@ -38,7 +39,7 @@ same way, and one lab has a working gateway. No step here replaces either.
 | Gap | Today |
 | --- | --- |
 | Other labs | the gateway requires the RDK lab's three device names and a room |
-| More than one lab per host | one Tailscale hostname carries one lab |
+| More than one lab per host | built (6 October): a lab's own name (section 4); two labs at once not shown yet |
 | Knowing what exists | the labs poster, updated by hand |
 | Watching without driving | every account is an operator; a second person sees only "in use" |
 | Waiting | no queue; the next person tries again |
@@ -69,22 +70,71 @@ the network is not the only lock.
 
 ### One address per lab
 
-Today a lab is reached as its host's Tailscale name on three fixed ports, so a host can
-publish one lab. If each **lab** has its own name, the lab's VM name (`rdk-MMDD`) is an address:
+On its host's Tailscale name a lab takes the host's ports, so a host can publish one lab,
+and the host's own programs compete for them: on rev120, Apache on `*:443` holds port 443
+of the host's Tailscale address, so the controller's interface there answered with
+Apache's expired certificate (6 October). If each **lab** has its own name:
 
 - a host publishes as many labs as it runs;
 - sharing a name shares exactly one lab;
 - a lab may use any number of ports on its own name, so labs with more than three
-  interfaces fit.
+  interfaces fit;
+- the host's other services never meet the lab's ports.
 
-Three ways to get a name per lab, to be tried (E1):
+**Built (6 October): a Tailscale node per lab, on its host, run by the gateway**
+(`manage.py address`; [setup](../guides/setup.md), "The lab's own address"). The three
+ways of E1, weighed on rev120 (Tailscale 1.102):
 
-1. Tailscale's named services on the host's node;
-2. one more Tailscale instance per lab on the host, in userspace mode;
-3. Tailscale inside the lab VM. This puts an access component into the lab image, which
-   the gateway has avoided so far.
+| Way | Verdict |
+| --- | --- |
+| 1. Tailscale Services (`tailscale serve --service=svc:NAME`) on the host's node | not now: a Service host must be a tagged device, so rev120 would stop being its owner's device; each Service is defined and its host approved in the admin console; the documentation names no Funnel for Services |
+| 2. A Tailscale instance per lab on the host, in userspace networking | **chosen**: nothing changes on the host's own node; the lab's ports exist only inside its own `tailscaled`, whatever else listens on the host; one unit and one login per lab |
+| 3. Tailscale inside the lab VM | no: below |
 
-Public access through Funnel stays limited to three ports per name whatever is chosen.
+Way 2 has one trap, found in Tailscale's source: in userspace networking an inbound
+connection on a port the node does not serve itself is forwarded to `127.0.0.1`, so every
+local service of the host (SSH, a web server) would answer on the lab's name. The lab's
+node runs under systemd with loopback denied but for the resolver and the labs' gateways;
+each lab's gateway listens on its own loopback address in `127.77.0.0/16`.
+
+**Why not Tailscale in the lab VM.** It would give the lab an address that travels with
+it, but:
+
+- every port listening in the VM (the controller's API on 8888 has no login, the room,
+  SSH, the containers' ports) would be on the tailnet, held back only by tailnet policy;
+- the gateway, the only lock on the interfaces, would have to move into the VM, which its
+  own guide counts as trusted and able to bypass it, or be skipped;
+- every build would need a Tailscale key, and the labs keep credentials out of images;
+- `tailscaled` would change the firewall and DNS of a VM whose networking (bridges, NAT,
+  the containers' networks) is what the lab tests;
+- each rebuild would be a new device on the tailnet, and a VM's name changes with each
+  rebuild.
+
+On the host, the identity belongs to the lab and survives its rebuilds; nothing enters
+the image.
+
+### Identities, names and accounts
+
+| What | Tailscale identity | Name | Reached by |
+| --- | --- | --- | --- |
+| A lab | a node of its own on its host, run by the gateway (`address`) | the lab's configuration: `rdk-emosa`, `rdk`, `prpl`, `emosa-osl`; `<configuration>-<host>` only if one configuration runs on two hosts at once | lab users, on 443, 8443 and 10000 only, through the gateway's sign-in |
+| A host | its own node, as now | the host: `rev120` | operators: SSH |
+| A person on the team | a tailnet member | their tailnet login | every lab node |
+| A person outside | none: a lab node is shared with them | | that lab only |
+| A gateway account | none: kept by the lab's gateway (`LAB.users.json`) | the person's short name, the same on every lab: `rob`, `alice` | an operator reserves and drives; an admin also releases, maintains and sees who is signed in |
+
+- **The gateway is named after the configuration** (`--lab rdk-emosa --vm rdk-emosa-1002`),
+  so its accounts, reservation state and Tailscale identity survive a rebuild; only
+  `--vm` and the card change (`card`).
+- **Tailnet policy**, once the tailnet has more people than its owner: lab nodes tagged
+  `tag:lab` (a tagged auth key: `address --auth-key-file`; tagged devices do not
+  expire); members granted `tag:lab` on ports 443, 8443 and 10000 only; hosts' SSH for
+  operators only; the `funnel` attribute only on a lab meant to be public.
+- **Accounts stay the gateway's own**, not the tailnet's identity: Funnel visitors have
+  none, and the tailnet's identity headers are not trusted for sign-in. One account set
+  per host shared by its labs is open question 2.
+
+Public access through Funnel stays limited to three ports per name, now per lab.
 
 ## 5. Selection
 
@@ -168,7 +218,7 @@ Each step leaves the gateway working for the RDK lab as it does today.
 | --- | --- | --- |
 | 1 | this repository: the gateway and its tests moved, the setup guide, the endpoint reference | the tests pass here; the RDK lab's copy is removed |
 | 2 | endpoints from the VM's proxy devices instead of three fixed names; the room check only where a room exists | the prplMesh lab and the OpenSync + EMOSA lab are reachable through the gateway |
-| 3 | one address per lab | two labs on one host are published at once |
+| 3 | one address per lab | two labs on one host are published at once: **built** (6 October), `rdk-emosa` on rev120 has its own name; two at once not shown yet |
 | 4 | the lab card and the per-host directory | a newcomer finds a free lab without asking |
 | 5 | the observer role | a second person watches a room being driven |
 | 6 | the workspace | a lab's interfaces are arranged in one window: **done** (6 October), the lab's page |
@@ -178,7 +228,7 @@ Each step leaves the gateway working for the RDK lab as it does today.
 
 | | Question | How |
 | --- | --- | --- |
-| E1 | Which way gives one Tailscale name per lab with the least added to a host? | try the three in section 4 on one host with two VMs |
+| E1 | Which way gives one Tailscale name per lab with the least added to a host? | try the three in section 4 on one host with two VMs. **Decided (6 October):** a Tailscale instance per lab on the host (section 4); Services need a tagged host, Tailscale in the VM exposes the VM |
 | E2 | Do all interfaces work when framed by the portal from another port? | frame the room, the controller's interface and Console NG together, behind the gateway. **Answered (6 October), yes:** on `rdk-emosa-1002` the three ran side by side through the gateway, each on its own origin, with their streams (the room's events, the controller's and Console NG's WebSockets), once the gateway replaced Console NG's `frame-ancestors 'none'` |
 | E3 | Which requests change state in each interface? | record a session of each, list the methods and paths |
 | E4 | How long does a lab take from stopped to usable? | start each lab VM and time it to a healthy room |

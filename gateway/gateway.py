@@ -365,7 +365,7 @@ async def run(config):
                 runner = web.AppRunner(gateway.application(service), access_log=None)
                 await runner.setup()
                 runners.append(runner)
-                await web.TCPSite(runner, "127.0.0.1", settings["local_port"]).start()
+                await web.TCPSite(runner, config.get("listen_address", "127.0.0.1"), settings["local_port"]).start()
             LOGGER.info("gateway ready lab=%s", config["lab"])
             await stopped.wait()
         finally:

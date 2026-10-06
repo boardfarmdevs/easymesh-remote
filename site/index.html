@@ -318,6 +318,7 @@ VM=rdk-MMDD                            # its VM, as the lab configurations name 
 sudo $REMOTE --lab "$LAB" configure --vm "$VM"   # find the lab's published ports; exposes nothing
 sudo $REMOTE --lab "$LAB" add-user alice --role admin
 sudo $REMOTE --lab "$LAB" add-user bob
+sudo $REMOTE --lab "$LAB" address      # the lab's own network name: a link to open
 sudo $REMOTE --lab "$LAB" publish --mode private
 sudo $REMOTE --lab "$LAB" status       # the three addresses to open</code></pre>
 <p>Then open the lab's page, <code>/_remote/</code> on any of the three addresses, sign in and
@@ -343,7 +344,7 @@ publishing and how to undo each of them.</p>
 <thead><tr><th>Gap</th><th>Today</th></tr></thead>
 <tbody>
 <tr><td>Other labs</td><td>it looks for the RDK lab's three interfaces by name, so the prplMesh, OpenSync and physical labs cannot be published through it</td></tr>
-<tr><td>Two labs on a host</td><td>one network name carries one lab's three ports</td></tr>
+<tr><td>Two labs on a host</td><td>each lab can have its own network name (<code>address</code>); two at once not tried yet</td></tr>
 <tr><td>Knowing what exists</td><td>a poster, updated by hand</td></tr>
 <tr><td>Watching</td><td>every account is an operator; a second person sees only "in use"</td></tr>
 <tr><td>Waiting</td><td>no queue</td></tr>
@@ -358,17 +359,19 @@ built.</p></aside>
 
 <section id="address">
 <h2>One address per lab</h2>
-<p>Today a lab is reached as its <em>host's</em> name. If each <em>lab</em> has a name of its
-own on the private network, three things follow at once: a host can publish every lab it
-runs, sharing a name with someone shares exactly one lab, and a lab can have as many ports as
-it has interfaces.</p>
-<pre><code>https://rdk-MMDD.&lt;network&gt;/            the controller's interface
-https://rdk-MMDD.&lt;network&gt;:8443/       Console NG
-https://rdk-MMDD.&lt;network&gt;:10000/      the room</code></pre>
-<p>A lab's name already says what it is (<code>rdk</code>, <code>prpl</code>,
-<code>rdk-emosa</code>) and when it was built (<code>MMDD</code>, the month and day). Making that name the
-address means an address identifies a lab configuration without a table to look it up in.
-How to give a lab its own name with the least added to a host is the first experiment.</p>
+<p>On its <em>host's</em> name a lab shares the host's ports, with the other labs and with
+whatever else the host runs (on rev120 a web server holds port 443). With a name of its own
+on the private network, a host can publish every lab it runs, sharing a name with someone
+shares exactly one lab, and a lab can have as many ports as it has interfaces. Built on
+6 October: <code>manage.py address</code>.</p>
+<pre><code>https://rdk-emosa.&lt;network&gt;/            the controller's interface
+https://rdk-emosa.&lt;network&gt;:8443/       Console NG
+https://rdk-emosa.&lt;network&gt;:10000/      the room</code></pre>
+<p>The name is the lab's configuration (<code>rdk</code>, <code>prpl</code>, <code>rdk-emosa</code>),
+not its VM: a VM is renamed at every rebuild (<code>rdk-emosa-1002</code>, then the next
+date), the lab's address stays. The name is a small network node of the lab's own, run by
+the gateway on the lab's host beside the host's own; it is not put inside the lab's VM,
+where every port of the VM would be on the network and the image would carry a key.</p>
 </section>
 
 <section id="choose">
@@ -525,7 +528,7 @@ video delay and no access for a program.</p>
 <tbody>
 <tr><td class="num">1</td><td>this repository: the gateway and its tests, the guide, the reference</td><td>the tests pass here</td></tr>
 <tr><td class="num">2</td><td>a lab's interfaces read from its VM, whatever they are called</td><td>the prplMesh and OpenSync labs are reachable</td></tr>
-<tr><td class="num">3</td><td>one address per lab</td><td>two labs on one host are published at once</td></tr>
+<tr><td class="num">3</td><td>one address per lab</td><td>two labs on one host are published at once: built, 6 October</td></tr>
 <tr><td class="num">4</td><td>the lab card and the directory</td><td>a newcomer finds a free lab without asking</td></tr>
 <tr><td class="num">5</td><td>observers</td><td>a second person watches a room being driven</td></tr>
 <tr><td class="num">6</td><td>the workspace</td><td>a lab's interfaces sit in one window: done, 6 October</td></tr>

@@ -205,8 +205,13 @@ def firewall(config, enabled):
         command("nft", "delete", "table", "inet", table)
 
 
-def expected_proxy(settings):
-    return "http://127.0.0.1:" + str(settings["local_port"])
+def tailscale(config):
+    """The tailscale command for the lab's node: its own (address) or the host's."""
+    return ["tailscale"] + (["--socket", config["tailscale_socket"]] if config.get("tailscale_socket") else [])
+
+
+def expected_proxy(config, settings):
+    return f"http://{config.get('listen_address', '127.0.0.1')}:{settings['local_port']}"
 
 
 def check_publication(config, current):
@@ -215,7 +220,7 @@ def check_publication(config, current):
         listener = current.get("TCP", {}).get(port)
         endpoint = config["hostname"] + ":" + port
         website = current.get("Web", {}).get(endpoint)
-        expected = {"Handlers": {"/": {"Proxy": expected_proxy(settings)}}}
+        expected = {"Handlers": {"/": {"Proxy": expected_proxy(config, settings)}}}
         related = [name for name in current.get("Web", {}) if name.endswith(":" + port)]
         if listener or website or related:
             if listener != {"HTTPS": True} or website != expected or related != [endpoint]:
@@ -225,7 +230,7 @@ def check_publication(config, current):
 def check_gateway(config):
     for name, settings in config["services"].items():
         endpoint = config["hostname"] + ("" if settings["public_port"] == 443 else ":" + str(settings["public_port"]))
-        request = urllib.request.Request(expected_proxy(settings) + "/_remote/status", headers={"Host": endpoint})
+        request = urllib.request.Request(expected_proxy(config, settings) + "/_remote/status", headers={"Host": endpoint})
         deadline = time.monotonic() + 10
         while True:
             try:
@@ -279,7 +284,7 @@ def publish(config, mode, confirmed=False):
     discovered = discover_services(config["vm"], config["services"]["topology"]["local_port"])
     if discovered != config["services"]:
         raise ValueError("VM port forwards changed. Unpublish, stop the gateway and update its configuration first.")
-    current = json.loads(read_command("tailscale", "serve", "status", "--json"))
+    current = json.loads(read_command(*tailscale(config), "serve", "status", "--json"))
     check_publication(config, current)
     command("systemctl", "enable", "--now", f"easymesh-remote-firewall@{config['lab']}.service")
     firewall(config, True)
@@ -292,8 +297,8 @@ def publish(config, mode, confirmed=False):
         for settings in config["services"].values():
             port = str(settings["public_port"])
             installed.append(port)
-            command("tailscale", verb, "--bg", "--https=" + port, expected_proxy(settings))
-        final = json.loads(read_command("tailscale", "serve", "status", "--json"))
+            command(*tailscale(config), verb, "--bg", "--https=" + port, expected_proxy(config, settings))
+        final = json.loads(read_command(*tailscale(config), "serve", "status", "--json"))
         check_publication(config, final)
         for settings in config["services"].values():
             port = str(settings["public_port"])
@@ -303,22 +308,92 @@ def publish(config, mode, confirmed=False):
         check_public(config)
     except (subprocess.SubprocessError, ValueError):
         for port in installed:
-            subprocess.run(["tailscale", verb, "--https=" + port, "off"], check=False)
+            subprocess.run([*tailscale(config), verb, "--https=" + port, "off"], check=False)
         raise
     print(f"Published {mode}; login and reservation required on every application/API/stream.")
     show_urls(config)
 
 
 def unpublish(config):
-    current = json.loads(read_command("tailscale", "serve", "status", "--json"))
+    current = json.loads(read_command(*tailscale(config), "serve", "status", "--json"))
     check_publication(config, current)
     for settings in config["services"].values():
         port = str(settings["public_port"])
         if port in current.get("TCP", {}):
             endpoint = config["hostname"] + ":" + port
             verb = "funnel" if current.get("AllowFunnel", {}).get(endpoint) else "serve"
-            command("tailscale", verb, "--https=" + port, "off")
+            command(*tailscale(config), verb, "--https=" + port, "off")
     print("Unpublished only this gateway. Direct-port protection remains enabled.")
+
+
+def listen_address(lab):
+    # Each lab's gateway listens on a loopback address of its own, in the range the labs' Tailscale
+    # nodes may reach (easymesh-remote-tailscale@.service); 127.0.0.0/8 is local without setup.
+    value = int(hashlib.sha256(lab.encode()).hexdigest()[:4], 16) % 65534 + 1
+    return f"127.77.{value >> 8}.{value & 255}"
+
+
+def node_status(socket, wait=20):
+    deadline = time.monotonic() + wait
+    while True:
+        try:
+            return json.loads(read_command("tailscale", "--socket", socket, "status", "--json"))
+        except (subprocess.SubprocessError, ValueError):
+            if time.monotonic() >= deadline:
+                raise ValueError(f"The lab's Tailscale node does not answer on {socket}; see its journal.")
+            time.sleep(.5)
+
+
+def published(config):
+    current = json.loads(read_command(*tailscale(config), "serve", "status", "--json"))
+    return any(f"{config['hostname']}:{settings['public_port']}" in current.get("Web", {})
+               for settings in config["services"].values())
+
+
+def own_address(config, name, auth_key_file=None):
+    """Give the lab a Tailscale node of its own, NAME.<tailnet>.ts.net, beside the host's."""
+    if config.get("tailscale_socket"):
+        raise ValueError(f"{config['lab']} already has its own address, {config['hostname']}.")
+    if published(config):
+        raise ValueError("Unpublish first; publish again once the lab has its own address.")
+    valid_name(name)
+    unit = f"easymesh-remote-tailscale@{config['lab']}.service"
+    socket = f"/run/easymesh-remote-tailscale/{config['lab']}/tailscaled.sock"
+    command("systemctl", "enable", "--now", unit)
+    status = node_status(socket)
+    if status.get("BackendState") != "Running":
+        up = ["tailscale", "--socket", socket, "up", "--hostname=" + name, "--accept-dns=false"]
+        if auth_key_file:
+            up.append("--auth-key=file:" + auth_key_file)
+        else:
+            print("Open the link below in a browser signed in to the tailnet to add the lab's node.", flush=True)
+        subprocess.run(up, check=True, stdin=subprocess.DEVNULL, timeout=1800)
+        status = node_status(socket)
+    hostname = status["Self"]["DNSName"].rstrip(".")
+    if status.get("BackendState") != "Running" or not re.fullmatch(re.escape(name) + r"\.[a-z0-9-]+\.ts\.net", hostname):
+        raise ValueError(f"The lab's node is {hostname or 'not running'}, not {name}.<tailnet>.ts.net: "
+                         "is the name taken by another device? Rename that device, or choose --name.")
+    config.update(hostname=hostname, tailscale_socket=socket, listen_address=listen_address(config["lab"]))
+    save_json(CONFIG_ROOT / (config["lab"] + ".json"), config, pwd.getpwnam("easymesh-remote"))
+    command("systemctl", "try-restart", f"easymesh-remote@{config['lab']}.service")
+    print(f"{config['lab']} now has its own address, {hostname}. Publish it: publish --mode private")
+
+
+def host_address(config):
+    """Back to the host's Tailscale node; the lab's node is stopped, its identity kept for later."""
+    if not config.get("tailscale_socket"):
+        raise ValueError(f"{config['lab']} already uses the host's address, {config['hostname']}.")
+    if published(config):
+        raise ValueError("Unpublish first; publish again on the host's address.")
+    status = json.loads(read_command("tailscale", "status", "--json"))
+    if status.get("BackendState") != "Running":
+        raise ValueError("The host's Tailscale is not running: sudo tailscale up first.")
+    config.pop("tailscale_socket")
+    config["hostname"] = status["Self"]["DNSName"].rstrip(".")
+    save_json(CONFIG_ROOT / (config["lab"] + ".json"), config, pwd.getpwnam("easymesh-remote"))
+    command("systemctl", "disable", "--now", f"easymesh-remote-tailscale@{config['lab']}.service")
+    command("systemctl", "try-restart", f"easymesh-remote@{config['lab']}.service")
+    print(f"{config['lab']} uses the host's address again, {config['hostname']}.")
 
 
 def show_urls(config):
@@ -349,6 +424,10 @@ def main():
     role.add_argument("username")
     role.add_argument("role", choices=ROLES)
     commands.add_parser("users", help="list the accounts, their roles and who is signed in")
+    address = commands.add_parser("address", help="give the lab a Tailscale node of its own (or --host: the host's)")
+    address.add_argument("--name", help="the node's name; the lab's label by default")
+    address.add_argument("--auth-key-file", help="a Tailscale auth key in a root-only file, instead of a login link")
+    address.add_argument("--host", action="store_true", help="back to the host's node")
     publisher = commands.add_parser("publish")
     publisher.add_argument("--mode", choices=("private", "public"), default="private")
     publisher.add_argument("--confirm-public", action="store_true")
@@ -395,6 +474,11 @@ def main():
         save_json(CONFIG_ROOT / (args.lab + ".json"), config, pwd.getpwnam("easymesh-remote"))
         print(json.dumps(config["card"], indent=2))
         print(f"Restart easymesh-remote@{args.lab} to show it.")
+    elif args.operation == "address":
+        if args.host:
+            host_address(config)
+        else:
+            own_address(config, args.name or args.lab, args.auth_key_file)
     elif args.operation == "publish":
         publish(config, args.mode, args.confirm_public)
     elif args.operation == "unpublish":
@@ -410,8 +494,10 @@ def main():
     elif args.operation == "status":
         print(json.dumps(sessions.status(), indent=2))
         show_urls(config)
-        command("systemctl", "--no-pager", "status", f"easymesh-remote@{args.lab}.service",
-                f"easymesh-remote-firewall@{args.lab}.service")
+        units = [f"easymesh-remote@{args.lab}.service", f"easymesh-remote-firewall@{args.lab}.service"]
+        if config.get("tailscale_socket"):
+            units.append(f"easymesh-remote-tailscale@{args.lab}.service")
+        command("systemctl", "--no-pager", "status", *units)
 
 
 if __name__ == "__main__":

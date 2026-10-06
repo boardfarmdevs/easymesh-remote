@@ -1,0 +1,37 @@
+[Unit]
+Description=The Tailscale node of EasyMesh lab %i: the lab's own address
+Documentation=https://vcpe.dev/easymesh-remote/
+After=network-online.target
+Wants=network-online.target
+Before=easymesh-remote@%i.service
+
+[Service]
+# A tailscaled of its own, beside the host's, in userspace networking: the lab's name and ports
+# exist only inside it, whatever else listens on the host. Its identity is kept on the host,
+# across rebuilds of the lab's VM.
+Type=notify
+ExecStart=/usr/sbin/tailscaled --tun=userspace-networking --port=0 \
+    --statedir=/var/lib/easymesh-remote-tailscale/%i \
+    --socket=/run/easymesh-remote-tailscale/%i/tailscaled.sock
+DynamicUser=yes
+StateDirectory=easymesh-remote-tailscale/%i
+StateDirectoryMode=0700
+RuntimeDirectory=easymesh-remote-tailscale/%i
+# Userspace networking forwards an inbound connection on a port it does not serve itself to
+# 127.0.0.1, which would open every local service of the host to the lab's address. Loopback is
+# denied but for the resolver and the labs' gateways (127.77.0.0/16; each lab has its own address).
+IPAddressDeny=localhost
+IPAddressAllow=127.0.0.53/32 127.0.0.54/32 127.77.0.0/16
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+CapabilityBoundingSet=
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+Restart=on-failure
+RestartSec=5
+MemoryMax=256M
+
+[Install]
+WantedBy=multi-user.target

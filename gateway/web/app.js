@@ -336,6 +336,15 @@ function setIcon(button, name, title) {
   button.replaceChildren(icon(name));
 }
 
+function watchLoad(tile) {
+  // A tile whose address does not answer (a certificate refused, a port taken) shows the
+  // browser's own error page, which this page cannot see into: no 'loaded' message comes.
+  clearTimeout(tile.loadTimer);
+  tile.loadTimer = setTimeout(() => {
+    tile.querySelector('.tile-note').textContent = `Not loaded: ${new URL(tile.dataset.origin).host} does not answer as this lab`;
+  }, 20000);
+}
+
 function tileFor(name) {
   const view = state.views[name];
   const frame = el('iframe', {src: view.origin + '/_remote/tile', title: view.title, allow: 'fullscreen', allowfullscreen: true});
@@ -344,12 +353,17 @@ function tileFor(name) {
     el('header', {class: 'tile-bar', ondblclick: event => { if (!event.target.closest('button, a')) toggleMaximize(name); }},
       el('span', {class: 'tile-title'}, view.title), note,
       el('span', {class: 'tile-tools'},
-        iconButton('reload', 'Reload this view', () => { note.textContent = ''; frame.src = view.origin + '/_remote/tile'; }),
+        iconButton('reload', 'Reload this view', () => {
+          note.textContent = '';
+          watchLoad(tile);
+          frame.src = view.origin + '/_remote/tile';
+        }),
         el('a', {class: 'icon-button', href: `${view.origin}/_remote/#layout=tabs&view=${name}`, target: '_blank',
           rel: 'noopener', title: 'Open alone in a new tab', 'aria-label': 'Open alone in a new tab'}, icon('open')),
         iconButton('maximize', 'Maximize in this window', () => toggleMaximize(name)),
         iconButton('fullscreen', 'Full screen', () => toggleFullscreen(tile)))),
     frame);
+  watchLoad(tile);
   return tile;
 }
 
@@ -511,6 +525,7 @@ function showWelcome() {
 
 function endWorkspace() {
   if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  tiles().forEach(tile => clearTimeout(tile.loadTimer));
   elements.tiles.replaceChildren();
   showWelcome();
 }
@@ -535,7 +550,10 @@ window.addEventListener('message', event => {
   if (!tile || event.data?.source !== 'easymesh-remote-tile') return;
   const note = tile.querySelector('.tile-note');
   if (event.data.type === 'activity') refreshSoon();
-  else if (event.data.type === 'loaded') note.textContent = '';
+  else if (event.data.type === 'loaded') {
+    clearTimeout(tile.loadTimer);
+    note.textContent = '';
+  }
   else if (event.data.type === 'outside') note.textContent = 'This view left the lab\'s address: reload it';
 });
 

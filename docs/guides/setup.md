@@ -41,7 +41,8 @@ Each application keeps its own root paths and same-origin APIs. The lab's page,
 (section "The lab's page").
 Do not publish raw backends alongside the gateway, or mount these applications
 under arbitrary URL prefixes. Only one lab can occupy these three ports on a
-Tailscale hostname; additional labs need a separate gateway node/hostname.
+Tailscale hostname, and on the host's own name they compete with the host's other
+services: give each lab its own name (section "The lab's own address").
 
 ## Install and configure
 
@@ -88,7 +89,8 @@ The gateway reads accounts and roles at each sign-in and administrative request:
 `role NAME admin|operator` and `remove-user` take effect at once, `users` lists
 the accounts and who is signed in, and `card` refreshes the lab card after a
 rebuild (then restart the gateway).
-Gateway listeners are loopback-only; their three ports are derived from the lab
+Gateway listeners are loopback-only (`127.0.0.1`, or the lab's own address in
+`127.77.0.0/16` once it has its own name); their three ports are derived from the lab
 name. Use `--local-port-base 41000` if those ports are occupied. Configuration
 files are root-owned and group-readable by the service, never world-readable.
 Passwords use salted scrypt; session tokens are random and stored only as hashes.
@@ -137,6 +139,40 @@ telemetry or use controls. There is no spectator or read-only role yet: every
 account can reserve the lab and drive it.
 Login attempts are bounded globally and per username; this is a small trusted
 collaborator service, not a hardened multi-tenant public hosting platform.
+
+## The lab's own address
+
+On the host's Tailscale name a lab takes the host's ports 443, 8443 and 10000, so a
+host publishes one lab, and a program of the host's that listens on one of them wins it
+(on rev120 Apache holds `*:443`). `address` gives the lab a Tailscale node of its own,
+named after the lab: `rdk-emosa.<tailnet>.ts.net`. Its ports are its own, a host can
+publish several labs, and sharing the node shares exactly one lab.
+
+```sh
+sudo "$REMOTE" --lab "$LAB" unpublish          # if it is published on the host's name
+sudo "$REMOTE" --lab "$LAB" address            # prints a link: open it signed in to the tailnet
+sudo "$REMOTE" --lab "$LAB" publish --mode private
+```
+
+- **What runs:** `easymesh-remote-tailscale@LAB.service`, a `tailscaled` of the lab's
+  own beside the host's, in userspace networking, as a throwaway system user with no
+  capabilities and a read-only system. The host's own Tailscale is not touched.
+- **Its identity lives on the host** (`/var/lib/easymesh-remote-tailscale/LAB`), next to
+  the gateway's state, so it survives rebuilds of the lab's VM: the lab keeps its name
+  while its VM changes from `rdk-emosa-1002` to the next build.
+- **What it reaches:** userspace networking forwards an inbound connection on any port
+  it does not serve itself to `127.0.0.1`, which would expose every local service of
+  the host on the lab's name. The unit denies loopback to the node except the resolver
+  and the labs' gateways: each lab's gateway listens on its own address in
+  `127.77.0.0/16` once the lab has its own name.
+- **Login:** the link adds the node as a device of the person who opens it. Disable
+  its key expiry in the admin console, or create the node with a tagged auth key
+  instead of the link (`address --auth-key-file FILE`, the key in a root-only file);
+  tagged devices do not expire.
+- **The name** is the lab's label; `--name` chooses another. `address` refuses when the
+  tailnet gives the node another name (the name is taken by another device).
+- **Back to the host's name:** `unpublish`, then `address --host`. The node is stopped
+  and its identity kept, so `address` brings the same name back.
 
 Serve/Funnel background configurations survive host/Tailscale restarts. The
 gateway and firewall units are enabled independently of the VM: they do **not**
@@ -326,4 +362,5 @@ before disabling maintenance. No native agent, controller or VM rebuild is neede
 - [Serve: private HTTPS and access rules](https://tailscale.com/docs/features/tailscale-serve)
 - [Funnel: public access, permitted ports and bandwidth limits](https://tailscale.com/docs/features/tailscale-funnel)
 - [Serve CLI and persistent background configuration](https://tailscale.com/docs/reference/tailscale-cli/serve)
+- [Userspace networking](https://tailscale.com/kb/1112/userspace-networking) and [Tailscale Services](https://tailscale.com/docs/features/tailscale-services) (the lab's own address)
 - [nftables hook priorities and rule semantics](https://netfilter.org/projects/nftables/manpage.html)

@@ -4,6 +4,7 @@ import concurrent.futures
 import copy
 import importlib.util
 import io
+import ipaddress
 import json
 import os
 import shutil
@@ -162,7 +163,7 @@ class SetupTests(unittest.TestCase):
             port = str(settings["public_port"])
             endpoint = config["hostname"] + ":" + port
             result["TCP"][port] = {"HTTPS": True}
-            result["Web"][endpoint] = {"Handlers": {"/": {"Proxy": remote_manage.expected_proxy(settings)}}}
+            result["Web"][endpoint] = {"Handlers": {"/": {"Proxy": remote_manage.expected_proxy(config, settings)}}}
             if public:
                 result["AllowFunnel"][endpoint] = True
         return result
@@ -201,6 +202,78 @@ class SetupTests(unittest.TestCase):
                     remote_manage.publish(config, "private")
             self.assertEqual([entry.args[0][2] for entry in rollback.call_args_list],
                              ["--https=443", "--https=8443", "--https=10000"])
+
+    def test_own_address_publishes_through_the_labs_node(self):
+        with tempfile.TemporaryDirectory() as directory:
+            config = configuration(directory)
+            config.update(hostname="test-lab.tail.ts.net", tailscale_socket="/run/easymesh-remote-tailscale/test-lab/tailscaled.sock",
+                          listen_address=remote_manage.listen_address("test-lab"))
+            Path(config["users_file"]).write_text('{"alice": "test-only-hash"}')
+            calls = []
+            with patch.object(remote_manage, "discover_services", return_value=config["services"]), \
+                    patch.object(remote_manage, "read_command", side_effect=lambda *arguments: calls.append(arguments) or (
+                        "{}" if len(calls) == 1 else json.dumps(self.publication(config)))), \
+                    patch.object(remote_manage, "command", side_effect=lambda *arguments: calls.append(arguments)), \
+                    patch.object(remote_manage, "firewall"), patch.object(remote_manage, "check_gateway"), \
+                    patch.object(remote_manage, "check_public"):
+                remote_manage.publish(config, "private")
+            tailscale = [call for call in calls if call[0] == "tailscale"]
+            self.assertEqual(len(tailscale), 5)
+            for call in tailscale:
+                self.assertEqual(call[1:3], ("--socket", config["tailscale_socket"]))
+            self.assertIn(f"http://{config['listen_address']}:41000", tailscale[1])
+
+    def test_labs_node_reaches_only_the_gateways_on_loopback(self):
+        unit = (REMOTE / "easymesh-remote-tailscale@.service").read_text()
+        self.assertIn("--tun=userspace-networking", unit)
+        self.assertIn("DynamicUser=yes", unit)
+        self.assertIn("IPAddressDeny=localhost", unit)
+        allowed = [ipaddress.ip_network(entry) for line in unit.splitlines() if line.startswith("IPAddressAllow=")
+                   for entry in line.removeprefix("IPAddressAllow=").split()]
+        self.assertFalse(any(ipaddress.ip_address("127.0.0.1") in network for network in allowed))
+        for lab in ("rdk-emosa", "rdk", "prpl", "emosa-osl", "easymesh-lab"):
+            address = ipaddress.ip_address(remote_manage.listen_address(lab))
+            self.assertTrue(any(address in network for network in allowed), lab)
+            self.assertTrue(address.is_loopback)
+        self.assertEqual(remote_manage.listen_address("rdk-emosa"), remote_manage.listen_address("rdk-emosa"))
+
+    def own_address(self, states, published="{}"):
+        with tempfile.TemporaryDirectory() as directory:
+            config = configuration(directory)
+            calls, saved = [], []
+            statuses = iter(states)
+            def read(*arguments):
+                calls.append(arguments)
+                return published if "serve" in arguments else json.dumps(next(statuses))
+            with patch.object(remote_manage, "read_command", side_effect=read), \
+                    patch.object(remote_manage, "command", side_effect=lambda *arguments: calls.append(arguments)), \
+                    patch.object(remote_manage.subprocess, "run", side_effect=lambda arguments, **kwargs: calls.append(tuple(arguments))), \
+                    patch.object(remote_manage, "save_json", side_effect=lambda path, value, owner: saved.append(copy.deepcopy(value))), \
+                    patch.object(remote_manage.pwd, "getpwnam"):
+                try:
+                    remote_manage.own_address(config, "test-lab")
+                finally:
+                    self.calls, self.saved = calls, saved
+
+    def test_own_address_logs_the_labs_node_in_and_moves_the_gateway(self):
+        self.own_address([{"BackendState": "NeedsLogin", "Self": {"DNSName": ""}},
+                          {"BackendState": "Running", "Self": {"DNSName": "test-lab.tail.ts.net."}}])
+        self.assertIn(("systemctl", "enable", "--now", "easymesh-remote-tailscale@test-lab.service"), self.calls)
+        login = next(call for call in self.calls if "up" in call)
+        self.assertEqual(login[:3], ("tailscale", "--socket", "/run/easymesh-remote-tailscale/test-lab/tailscaled.sock"))
+        self.assertIn("--hostname=test-lab", login)
+        self.assertEqual(self.saved[-1]["hostname"], "test-lab.tail.ts.net")
+        self.assertEqual(self.saved[-1]["listen_address"], remote_manage.listen_address("test-lab"))
+        self.assertEqual(self.calls[-1], ("systemctl", "try-restart", "easymesh-remote@test-lab.service"))
+
+    def test_own_address_refuses_a_taken_name_and_a_published_lab(self):
+        with self.assertRaisesRegex(ValueError, "taken by another device"):
+            self.own_address([{"BackendState": "Running", "Self": {"DNSName": "test-lab-1.tail.ts.net."}}])
+        self.assertEqual(self.saved, [])
+        published = {"Web": {"lab.test.ts.net:443": {"Handlers": {}}}}
+        with self.assertRaisesRegex(ValueError, "Unpublish first"):
+            self.own_address([], published=json.dumps(published))
+        self.assertFalse(any(call[:2] == ("systemctl", "enable") for call in self.calls))
 
     def test_public_check_names_who_answers(self):
         config = configuration("/tmp")

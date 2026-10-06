@@ -129,7 +129,8 @@ three names and gives each a fixed public port.
 | Physical protocol lab | no | two other devices, and no room |
 
 The three public ports are the only ones Tailscale Funnel offers, which is why one
-Tailscale hostname carries one lab. Before a reservation the gateway also asks the room
+Tailscale hostname carries one lab; `address` gives a lab a Tailscale name of its own
+([setup](../guides/setup.md), "The lab's own address"). Before a reservation the gateway also asks the room
 whether a local operator holds it (`/api/demo/interactions`), so a lab without a room
 cannot be reserved as the code stands.
 
@@ -138,4 +139,8 @@ cannot be reserved as the code stands.
 - No lab VM was running when this was first written. The device names, the guest ports and
   the default host ports are read from the build scripts.
 - Tailscale on the hosts, checked on 2 October 2026: rev120 runs it; rev140 and rev150 do
-  not have it installed. No host has the gateway installed or configured.
+  not have it installed. No host had the gateway installed or configured then.
+- rev120, 6 October 2026: the gateway installed and published privately for `rdk-emosa`
+  (`rdk-emosa-1002`'s three proxies as in section 2, host ports 20110 to 20112, now closed
+  to the LAN by its firewall). Apache on rev120 listens on `*:443`, which holds port 443
+  of the host's own Tailscale address: the lab is moved to a Tailscale name of its own.
