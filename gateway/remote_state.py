@@ -106,6 +106,12 @@ class Sessions:
             "maintenance": bool(database.execute("SELECT enabled FROM maintenance WHERE slot=1").fetchone()[0]),
         }
 
+    def signed_in(self):
+        with self.transaction() as database:
+            self.expire(database)
+            return [{"username": row["username"], "sessions": row["count"]} for row in database.execute(
+                "SELECT username, COUNT(*) AS count FROM sessions GROUP BY username ORDER BY username")]
+
     def acquire(self, token):
         with self.transaction() as database:
             self.expire(database)

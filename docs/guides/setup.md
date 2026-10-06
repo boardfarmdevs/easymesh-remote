@@ -36,8 +36,9 @@ ports, not grant SSH, LXD or the whole lab subnet.
 | Console NG | 8443 | base + 1 |
 | Room | 10000 | base + 2 |
 
-Each application keeps its own root paths and same-origin APIs. The portal
-provides links between the three external URLs and an embedded full-size view.
+Each application keeps its own root paths and same-origin APIs. The lab's page,
+`/_remote/` on any of the three addresses, shows them together in one window
+(section "The lab's page").
 Do not publish raw backends alongside the gateway, or mount these applications
 under arbitrary URL prefixes. Only one lab can occupy these three ports on a
 Tailscale hostname; additional labs need a separate gateway node/hostname.
@@ -55,15 +56,24 @@ Keep Ubuntu security updates and Tailscale current.
 sudo bash gateway/install-host.sh
 sudo tailscale up
 
-LAB=demo-a                         # your existing VM name
+LAB=rdk-emosa                      # the lab's configuration name
+VM=rdk-emosa-1002                  # its VM now
 REMOTE=/opt/easymesh-remote/manage.py
-sudo "$REMOTE" --lab "$LAB" configure
+sudo "$REMOTE" --lab "$LAB" configure --vm "$VM"
+sudo "$REMOTE" --lab "$LAB" add-user rob --role admin
 sudo "$REMOTE" --lab "$LAB" add-user alice
 sudo "$REMOTE" --lab "$LAB" add-user bob
 ```
 
-Give each person a separate account and a unique password of at least 16
-characters; creation prompts without placing passwords on the command line.
+Name the gateway after the lab's configuration, not its VM: the label keeps the
+accounts, the reservation state and the address when the VM is rebuilt under a
+new name, and only `--vm` changes. Give each person a separate account and a
+unique password of at least 16 characters; creation prompts without placing
+passwords on the command line. An account is an **operator** (reserves and uses
+the lab) or an **admin** (also releases the lab, switches maintenance and sees who
+is signed in, from the lab's page). `configure` records the lab card the page
+shows: the configuration's title and summary (`--title`, `--summary` to change
+them) and the VM's build date.
 `configure` detects the authenticated Tailscale hostname and existing LXD proxy
 addresses/ports; it refuses missing, wildcard or unsupported proxy definitions.
 Use `configure --vm VM_NAME` when the gateway label differs from the VM name.
@@ -72,8 +82,12 @@ remote backends, prpl device names, or a subnet router. Discovery also records
 the corresponding VM interface's IPv6 addresses for direct-access blocking;
 it refuses setup when the running VM's interface inventory cannot be verified.
 
-Configuration lives in `/etc/easymesh-remote/LAB.json`, password hashes in
-`LAB.users.json`, and session state in `/var/lib/easymesh-remote/LAB/`.
+Configuration lives in `/etc/easymesh-remote/LAB.json`, password hashes and
+roles in `LAB.users.json`, and session state in `/var/lib/easymesh-remote/LAB/`.
+The gateway reads accounts and roles at each sign-in and administrative request:
+`role NAME admin|operator` and `remove-user` take effect at once, `users` lists
+the accounts and who is signed in, and `card` refreshes the lab card after a
+rebuild (then restart the gateway).
 Gateway listeners are loopback-only; their three ports are derived from the lab
 name. Use `--local-port-base 41000` if those ports are occupied. Configuration
 files are root-owned and group-readable by the service, never world-readable.
@@ -104,8 +118,11 @@ sudo "$REMOTE" --lab "$LAB" status
 sudo tailscale serve status
 ```
 
-Follow Tailscale's consent link if HTTPS needs enabling. The command prints the
-actual three URLs; open `/_remote/` on any of them. Private visitors must have
+Follow Tailscale's consent link if HTTPS needs enabling. `publish` then requests
+each public URL and rolls back unless this gateway answers there: another program
+listening on that port of the host's Tailscale address (a web server on `*:443`,
+as on rev120) takes the port from Serve, which Serve's own status does not show.
+The command prints the actual three URLs; open `/_remote/` on any of them. Private visitors must have
 Tailscale installed, be signed in and be allowed by tailnet policy. Complete the
 two-browser checks below before making the same gateway public:
 
@@ -116,8 +133,8 @@ sudo tailscale funnel status
 
 Follow Tailscale's additional Funnel consent/policy flow. Only the gateway is
 exposed, including its login page. An anonymous visitor cannot read topology,
-telemetry or use controls. Accounts have the same operator permissions: there
-is no public spectator or read-only role in this initial implementation.
+telemetry or use controls. There is no spectator or read-only role yet: every
+account can reserve the lab and drive it.
 Login attempts are bounded globally and per username; this is a small trusted
 collaborator service, not a hardened multi-tenant public hosting platform.
 
@@ -129,7 +146,7 @@ are never overwritten, and scripts never call `tailscale serve reset`.
 
 ## Reservation, activity and handoff
 
-Sign in, then press **Reserve lab**. A persistent SQLite transaction gives
+Sign in, then press **Reserve and open the lab**. A persistent SQLite transaction gives
 exactly one browser session ownership across all three applications and their
 HTTP, SSE and WebSocket endpoints. Another browser sees the owner's account,
 idle countdown and hard limit; it cannot enter any view or call its APIs.
@@ -137,7 +154,7 @@ Tabs in the same browser profile share the secure, HTTP-only session cookie.
 Two browsers using the same account still cannot acquire concurrently.
 
 - **Idle timeout: 10 minutes.** Real clicks, keys, scrolling and touch activity
-  in a visible, focused portal or embedded view renew it. **Keep session active**
+  in a visible, focused lab's page or any of its views renew it. **Keep active**
   supports watching a long demonstration without dragging objects.
 - **Hard maximum: 60 minutes.** Activity cannot extend this reservation deadline.
 - Automatic metrics requests, status polling, open sockets and unattended Play
@@ -153,12 +170,41 @@ Two browsers using the same account still cannot acquire concurrently.
 - Before acquisition, the gateway checks the room's native lease. An existing
   local operator or unavailable/invalid lease response blocks admission.
 
-The banner remains above the view; application fullscreen temporarily hides it,
-but genuine input inside fullscreen still counts. On expiry the portal unloads
-the view. Opening a backend page outside the portal does not install the activity
-detector, although all server-side gates still apply. Use portal URLs for normal
+The page's bar stays above the views; full screen hides it, but genuine input in
+a full-screen view still counts. On expiry the page closes every view. Opening a
+backend page outside the lab's page does not install the activity detector,
+although all server-side gates still apply: use the lab's page for normal
 operation. Synthetic browser events do not count; a deliberately scripted API
 client can send activity explicitly but cannot exceed the hard deadline.
+
+## The lab's page
+
+`/_remote/` on any of the lab's addresses is its front door and its workspace.
+
+- **Before a reservation:** the lab card (what the lab is; for a signed-in
+  account its VM, host and build date), whether it is free, who holds it and when
+  it will be free at the latest, sign-in, reserve, the lab's views and the rules
+  above.
+- **During one:** every view of the lab in one window, in three layouts: **side
+  by side**, **one large** with the others stacked beside it, and **one at a
+  time** with tabs. Dividers are dragged to resize (double-click shares evenly),
+  a tile's title bar maximizes it within the window (double-click, or its button;
+  Escape restores) or shows it full screen, and each tile can be opened alone in
+  a new tab. **Lab page** returns to the welcome with the views kept open.
+- **The layout** is kept per lab in the browser and in the address (for example
+  `#layout=tabs&view=room`), so a link opens the same arrangement.
+- **An admin** has **Manage**: who is signed in and in how many browsers, release
+  the lab now (the handoff delay still applies), start and end maintenance. Accounts
+  are added and removed on the host only.
+
+Each view keeps its own origin, as its application requires. The page frames
+each one through a tile, `/_remote/tile` on the view's own origin, which watches
+the view for genuine input (the page cannot see into another origin's frame) and
+renews the reservation itself. The gateway allows the lab's own origins to frame
+its views and tiles, and nothing else: it replaces any `frame-ancestors` and
+`X-Frame-Options` of an application (Console NG forbids all framing) with the
+lab's origins. Tiles are never moved in the page, because moving a frame reloads
+its view: the layouts rearrange them in one grid.
 
 Login expires after eight hours. Reservation state and deadlines survive gateway
 restarts. There is no waiting queue or automatic takeover; after release and
@@ -249,8 +295,9 @@ node tests/remote-access-browser-test.js
 
 After installation, verify with two different browser profiles/accounts:
 
-1. Anonymous topology/API/WebSocket requests fail; the portal login works.
-2. Alice reserves and uses room Play/drag, topology and Console NG streaming.
+1. Anonymous topology/API/WebSocket requests fail; the lab's page sign-in works.
+2. Alice reserves and uses room Play/drag, topology and Console NG streaming,
+   side by side in the lab's page, and input in each view renews idle time.
    Bob sees **In use by alice**, with no backend access on any of the three ports.
 3. Confirm genuine activity renews idle time, background polling does not, and
    expiry/release closes streams. Bob can reserve after the handoff countdown.
@@ -270,7 +317,7 @@ Future API clients use the same login/reservation/activity flow, with HTTPS
 Origin headers for writes; no separate unauthenticated API publication is needed.
 
 For gateway-only upgrades, enable maintenance, rerun the installer from the new
-checkout, and restart `easymesh-remote@LAB.service`. Check the portal and firewall
+checkout, and restart `easymesh-remote@LAB.service`. Check the lab's page and firewall
 before disabling maintenance. No native agent, controller or VM rebuild is needed.
 
 ## Upstream references

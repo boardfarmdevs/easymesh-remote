@@ -2,8 +2,10 @@
 
 [Documents](../README.md)
 
-**Status:** Proposal. Nothing in sections 4 to 9 is implemented. What exists is the gateway
-([setup](../guides/setup.md)) for the RDK lab. **Prepared:** 2 October 2026.
+**Status:** Proposal, partly built. What exists is the gateway ([setup](../guides/setup.md))
+for the RDK lab, published privately for `rdk-emosa` on rev120 since 6 October, and the
+lab's page of section 7 (step 6, built 6 October, with the card of section 5 shown on it).
+The rest of sections 4 to 9 is not implemented. **Prepared:** 2 October 2026.
 
 ## 1. The goal
 
@@ -27,7 +29,7 @@ same way, and one lab has a working gateway. No step here replaces either.
 | Piece | Where | What it gives |
 | --- | --- | --- |
 | Published ports | every lab VM: LXD proxy devices | each interface on a host address and port, unauthenticated ([reference](../reference/lab-endpoints.md)) |
-| The gateway | this repository, `gateway/` | login, one exclusive reservation across a lab's interfaces, Tailscale Serve (private) or Funnel (public), a firewall for the direct ports, a portal that embeds one interface |
+| The gateway | this repository, `gateway/` | login, one exclusive reservation across a lab's interfaces, Tailscale Serve (private) or Funnel (public), a firewall for the direct ports, the lab's page: a welcome with the lab card, and every interface in one window (section 7); operator and admin accounts |
 | The room's own lease | the room service | one operator in the room at a time, 120 seconds at most |
 | Labs as a service | the umbrella's proposal of 26 September 2026 | a remote optimizer: an API and a Python library, on top of remote access |
 
@@ -40,8 +42,8 @@ same way, and one lab has a working gateway. No step here replaces either.
 | Knowing what exists | the labs poster, updated by hand |
 | Watching without driving | every account is an operator; a second person sees only "in use" |
 | Waiting | no queue; the next person tries again |
-| One window | the portal shows one interface at a time |
-| Suites and people | the suites do not take the reservation; an administrator switches maintenance on by hand |
+| One window | done (6 October): the lab's page, section 7 |
+| Suites and people | the suites do not take the reservation; an administrator switches maintenance on by hand or from the lab's page |
 
 ## 4. Accessibility
 
@@ -131,17 +133,27 @@ is the HTTP method and the lease; for the controller's interface it needs a list
 
 ## 7. One window
 
-A **workspace** page in the portal: each interface of the lab is a tile in one browser
-window.
+**Built (6 October)** as the lab's page, `/_remote/` on any of the lab's addresses
+([setup](../guides/setup.md), "The lab's page"): a welcome and management window before a
+reservation, and every interface of the lab in one window during it.
 
-- tiles can be moved, resized, zoomed and closed; a layout is kept per lab configuration
-  and can be shared as a link;
-- each interface stays on its own origin (its own port on the lab's name), as the
-  interfaces require; the workspace only frames them;
-- the gateway already sets the framing headers of what it proxies, so it can allow its own
-  portal and nothing else;
-- the moving and resizing is an existing library's job (a tiling or grid library), not
-  code written here.
+- **The welcome:** the lab card, whether the lab is free, who holds it and when it is
+  free at the latest, sign-in and reserve, the interfaces, the rules. An admin account
+  also manages the lab there: who is signed in, release, maintenance.
+- **The workspace:** three layouts (side by side; one large with the others stacked; one
+  at a time with tabs), dividers dragged to resize, any tile maximized in the window or
+  full screen or opened alone in a tab; the layout kept per lab and in the address, so it
+  can be shared as a link.
+- **Origins:** each interface stays on its own origin, as the interfaces require. The page
+  frames it through a tile on that origin (`/_remote/tile`), which sees the interface's
+  genuine input and renews the reservation: the page itself cannot see into another
+  origin's frame. The gateway lets the lab's own origins frame what it proxies and nothing
+  else, replacing an interface's own `frame-ancestors` (Console NG: `'none'`).
+- **Changed from the first plan:** tiles are chosen layouts with resizable dividers, not
+  free-moving tiles from a library. Moving a frame in a page reloads it, which would
+  restart the room's view and its streams at every move; the layouts rearrange the tiles
+  in one grid without moving them. Zoom is left to each interface (the room and Console
+  NG have their own).
 
 | Alternative | For | Against |
 | --- | --- | --- |
@@ -159,7 +171,7 @@ Each step leaves the gateway working for the RDK lab as it does today.
 | 3 | one address per lab | two labs on one host are published at once |
 | 4 | the lab card and the per-host directory | a newcomer finds a free lab without asking |
 | 5 | the observer role | a second person watches a room being driven |
-| 6 | the workspace | a lab's interfaces are arranged in one window |
+| 6 | the workspace | a lab's interfaces are arranged in one window: **done** (6 October), the lab's page |
 | 7 | the queue, the suites' reservation, starting a lab on demand | two people alternate without talking to each other |
 
 ## 9. Experiments
@@ -167,7 +179,7 @@ Each step leaves the gateway working for the RDK lab as it does today.
 | | Question | How |
 | --- | --- | --- |
 | E1 | Which way gives one Tailscale name per lab with the least added to a host? | try the three in section 4 on one host with two VMs |
-| E2 | Do all interfaces work when framed by the portal from another port? | frame the room, the controller's interface and Console NG together, behind the gateway |
+| E2 | Do all interfaces work when framed by the portal from another port? | frame the room, the controller's interface and Console NG together, behind the gateway. **Answered (6 October), yes:** on `rdk-emosa-1002` the three ran side by side through the gateway, each on its own origin, with their streams (the room's events, the controller's and Console NG's WebSockets), once the gateway replaced Console NG's `frame-ancestors 'none'` |
 | E3 | Which requests change state in each interface? | record a session of each, list the methods and paths |
 | E4 | How long does a lab take from stopped to usable? | start each lab VM and time it to a healthy room |
 | E5 | What does the gateway cost under a room's event stream and several observers? | one operator and ten observers on a 50-client room |

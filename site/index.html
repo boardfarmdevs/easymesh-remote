@@ -313,19 +313,22 @@ strangers, and anyone with a shell on the host is trusted completely.</p></aside
 sudo tailscale up                      # join the private network
 
 REMOTE=/opt/easymesh-remote/manage.py
-VM=rdk-MMDD                            # the lab's VM, as the lab configurations name it
-sudo $REMOTE --lab "$VM" configure  # find the lab's published ports; exposes nothing
-sudo $REMOTE --lab "$VM" add-user alice
-sudo $REMOTE --lab "$VM" publish --mode private
-sudo $REMOTE --lab "$VM" status     # the three addresses to open</code></pre>
-<p>Then open the portal, <code>/_remote/</code> on any of the three addresses, sign in and
+LAB=rdk                                # the lab's configuration: kept across rebuilds
+VM=rdk-MMDD                            # its VM, as the lab configurations name it
+sudo $REMOTE --lab "$LAB" configure --vm "$VM"   # find the lab's published ports; exposes nothing
+sudo $REMOTE --lab "$LAB" add-user alice --role admin
+sudo $REMOTE --lab "$LAB" add-user bob
+sudo $REMOTE --lab "$LAB" publish --mode private
+sudo $REMOTE --lab "$LAB" status       # the three addresses to open</code></pre>
+<p>Then open the lab's page, <code>/_remote/</code> on any of the three addresses, sign in and
 reserve. Before making a lab public, check it with two browsers and two accounts: the second
 must see "in use" and reach nothing.</p>
 <div class="table-wrap"><table>
 <thead><tr><th>To</th><th>Run</th></tr></thead>
 <tbody>
 <tr><td>run local tests on the host</td><td><code>maintenance-on</code>, test, <code>maintenance-off</code></td></tr>
-<tr><td>end someone's reservation</td><td><code>release</code></td></tr>
+<tr><td>end someone's reservation</td><td><code>release</code>, or <b>Manage</b> on the lab's page as an admin</td></tr>
+<tr><td>make someone an admin</td><td><code>role NAME admin</code></td></tr>
 <tr><td>remove a person</td><td><code>remove-user NAME</code></td></tr>
 <tr><td>stop sharing</td><td><code>unpublish</code>; the firewall stays until it is switched off separately</td></tr>
 </tbody></table></div>
@@ -344,7 +347,6 @@ publishing and how to undo each of them.</p>
 <tr><td>Knowing what exists</td><td>a poster, updated by hand</td></tr>
 <tr><td>Watching</td><td>every account is an operator; a second person sees only "in use"</td></tr>
 <tr><td>Waiting</td><td>no queue</td></tr>
-<tr><td>One window</td><td>the portal shows one interface at a time</td></tr>
 </tbody></table></div>
 <p>The first gap is smaller than it looks. Every lab publishes its interfaces the same way;
 the prplMesh lab is unreachable through the gateway because one of its three ports has a
@@ -451,8 +453,9 @@ the controller's interface it needs a list.</p>
 <h2>One window</h2>
 <p>A lab is understood by looking at several interfaces at once: the room to see where a
 client is, the controller to see what the mesh believes, the console to see what the radio
-medium did. Today that is three browser tabs. The proposal is a <strong>workspace</strong>:
-one page that frames the lab's interfaces as tiles.</p>
+medium did. The lab's page does it (built 6 October): before a reservation it is the lab's
+welcome and management window; during one, a <strong>workspace</strong> that frames the lab's
+interfaces as tiles in one window.</p>
 <figure class="wide" id="fig-workspace">
 <div class="fig">
 <svg viewBox="0 0 820 340" role="img" aria-label="A sketch of a workspace: a header with the lab's name and the reservation, and three tiles: the room, large, with the controller's topology and Console NG beside it.">
@@ -495,15 +498,17 @@ one page that frames the lab's interfaces as tiles.</p>
   </g>
 </svg>
 </div>
-<figcaption><b>A workspace, sketched.</b> Each tile is the interface itself, on its own
-address. The page around them only places them.</figcaption>
+<figcaption><b>The workspace, in its "one large" layout.</b> Each tile is the interface itself,
+on its own address. The page around them only places them.</figcaption>
 </figure>
 <ul>
-  <li>Tiles can be moved, resized, zoomed and closed. A layout is remembered per kind of lab
+  <li>Three layouts: side by side, one large with the others stacked, one at a time. Dividers
+  resize, any tile can fill the window or the screen, and the layout is remembered per lab
   and can be passed on as a link.</li>
   <li>Each interface stays where it is, on its own port. The workspace frames it and does not
-  rewrite it. The gateway already decides who may frame what it proxies.</li>
-  <li>The moving and resizing is the work of an existing tiling library, not of new code.</li>
+  rewrite it; the gateway lets only the lab's own addresses frame what it proxies.</li>
+  <li>Tiles are not dragged around: moving a frame in a page reloads it, which would restart
+  the room's view at every move. The layouts rearrange the tiles without moving them.</li>
 </ul>
 <p>Two alternatives are worth knowing. A ready-made dashboard of the kind people run for a
 home network gives a list of services and framed tiles with no code, but knows nothing of
@@ -523,7 +528,7 @@ video delay and no access for a program.</p>
 <tr><td class="num">3</td><td>one address per lab</td><td>two labs on one host are published at once</td></tr>
 <tr><td class="num">4</td><td>the lab card and the directory</td><td>a newcomer finds a free lab without asking</td></tr>
 <tr><td class="num">5</td><td>observers</td><td>a second person watches a room being driven</td></tr>
-<tr><td class="num">6</td><td>the workspace</td><td>a lab's interfaces sit in one window</td></tr>
+<tr><td class="num">6</td><td>the workspace</td><td>a lab's interfaces sit in one window: done, 6 October</td></tr>
 <tr><td class="num">7</td><td>the queue, the suites' reservation, starting a lab on demand</td><td>two people alternate without talking to each other</td></tr>
 </tbody></table></div>
 <p>Beyond this lies a different thing: an optimizer that runs on a developer's own machine
@@ -540,8 +545,8 @@ proposal</a>.</p>
 <div class="table-wrap"><table>
 <thead><tr><th>Part</th><th>What it is</th></tr></thead>
 <tbody>
-<tr><td><code>gateway/</code></td><td>the gateway: the proxy and its portal, the management command, the sessions and the reservation, the installer and the systemd units</td></tr>
-<tr><td><code>tests/</code></td><td>its tests: sessions, publication, the firewall in disposable network namespaces, the proxy, and a browser test of the portal with two accounts</td></tr>
+<tr><td><code>gateway/</code></td><td>the gateway: the proxy and the lab's page, the management command (accounts and roles, publication), the sessions and the reservation, the installer and the systemd units</td></tr>
+<tr><td><code>tests/</code></td><td>its tests: sessions, publication, the firewall in disposable network namespaces, the proxy, and a browser test of the lab's page with three accounts</td></tr>
 <tr><td><code>docs/guides/</code></td><td><a href="https://github.com/boardfarmdevs/easymesh-remote/blob/main/docs/guides/setup.md">setting up the gateway</a></td></tr>
 <tr><td><code>docs/reference/</code></td><td><a href="https://github.com/boardfarmdevs/easymesh-remote/blob/main/docs/reference/lab-endpoints.md">what each lab publishes</a>: every interface of every lab, and the ways to reach one today</td></tr>
 <tr><td><code>docs/proposals/</code></td><td><a href="https://github.com/boardfarmdevs/easymesh-remote/blob/main/docs/proposals/remote-labs.md">remote labs</a></td></tr>

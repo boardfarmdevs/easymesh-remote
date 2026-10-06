@@ -3,32 +3,111 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>EasyMesh remote session</title>
-  <link rel="stylesheet" href="/_remote/portal.css">
-  <script src="/_remote/portal.js" defer></script>
+  <title>EasyMesh lab</title>
+  <link rel="icon" href="/_remote/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/_remote/app.css">
+  <script src="/_remote/app.js" defer></script>
 </head>
 <body>
-  <header>
-    <strong id="title">EasyMesh remote access</strong>
-    <nav id="links" aria-label="Lab views"></nav>
-    <span id="status" role="status" aria-live="polite">Connecting…</span>
-    <button id="keep" hidden>Keep session active</button>
-    <button id="release" hidden>Release lab</button>
-    <button id="logout" hidden>Sign out</button>
+  <header class="bar">
+    <a class="brand" href="/_remote/" aria-label="The lab's page">
+      <img src="/_remote/icon.svg" alt="" width="26" height="26">
+      <span class="brand-text"><span id="bar-title">EasyMesh lab</span><span id="bar-meta" class="bar-meta"></span></span>
+    </a>
+    <span id="state" class="pill" role="status" aria-live="polite">Connecting…</span>
+    <span id="timers" class="timers" hidden>
+      <span class="timer" title="Real clicks, keys and scrolling renew it"><span class="timer-label">Idle</span> <span id="idle">–</span></span>
+      <span class="timer" title="The reservation's hard limit"><span class="timer-label">Limit</span> <span id="limit">–</span></span>
+    </span>
+    <span class="bar-actions">
+      <button id="keep" class="button quiet" hidden>Keep active</button>
+      <button id="release" class="button quiet" hidden>Release lab</button>
+      <button id="manage" class="button quiet" hidden aria-controls="admin" aria-expanded="false">Manage</button>
+      <span id="who" class="who" hidden></span>
+      <button id="logout" class="button quiet" hidden>Sign out</button>
+    </span>
   </header>
-  <main id="lobby">
-    <h1>One lab, one active session</h1>
-    <p>Sign in and reserve the lab. The reservation covers the room, topology, console and their APIs.</p>
-    <form id="login">
-      <label>Username <input name="username" autocomplete="username" required maxlength="32"></label>
-      <label>Password <input name="password" type="password" autocomplete="current-password" required maxlength="512"></label>
-      <button type="submit">Sign in</button>
-    </form>
-    <button id="acquire" hidden>Reserve lab</button>
-    <p id="detail"></p>
-    <p>Real clicks, keys and scrolling renew the idle timer. Watching charts, automatic polling and an unattended Play session do not. The maximum session time cannot be extended.</p>
+  <p id="error" class="error" role="alert" hidden></p>
+
+  <main id="welcome" class="welcome">
+    <section class="hero">
+      <p class="eyebrow">EasyMesh labs · remote access</p>
+      <h1 id="title">EasyMesh lab</h1>
+      <p id="summary" class="summary"></p>
+      <dl id="facts" class="facts" hidden></dl>
+    </section>
+
+    <section class="door" aria-labelledby="door-heading">
+      <h2 id="door-heading" class="visually-hidden">Access</h2>
+      <div id="availability" class="availability">
+        <span id="availability-dot" class="dot"></span>
+        <div>
+          <p id="availability-text" class="availability-text">Connecting…</p>
+          <p id="availability-detail" class="availability-detail"></p>
+        </div>
+      </div>
+      <p id="ended" class="notice" hidden></p>
+      <form id="login" class="login" hidden>
+        <label>Username <input name="username" autocomplete="username" required maxlength="32" autocapitalize="none" spellcheck="false"></label>
+        <label>Password <input name="password" type="password" autocomplete="current-password" required maxlength="512"></label>
+        <button type="submit" class="button primary">Sign in</button>
+      </form>
+      <div id="reserve" class="reserve" hidden>
+        <button id="acquire" class="button primary large">Reserve and open the lab</button>
+        <p id="reserve-note" class="reserve-note"></p>
+      </div>
+      <div id="resume" class="reserve" hidden>
+        <button id="open" class="button primary large">Open the lab</button>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="views-heading">
+      <h2 id="views-heading">In this lab</h2>
+      <ul id="view-cards" class="cards"></ul>
+    </section>
+
+    <section class="section" aria-labelledby="rules-heading">
+      <h2 id="rules-heading">How the lab is shared</h2>
+      <ul id="rules" class="rules"></ul>
+    </section>
   </main>
-  <p id="error" role="alert" hidden></p>
-  <iframe id="view" title="Reserved EasyMesh lab view" allow="fullscreen" allowfullscreen hidden></iframe>
+
+  <section id="workspace" class="workspace" hidden aria-label="The lab's views">
+    <div class="toolbar">
+      <div id="layouts" class="segmented" role="group" aria-label="Layout"></div>
+      <div id="tabs" class="tabs" role="tablist" aria-label="Views" hidden></div>
+      <span class="toolbar-hint">Drag a divider to resize · double-click a title to maximize</span>
+      <button id="close-workspace" class="button quiet small" title="Back to the lab's page; the reservation stays">Lab page</button>
+    </div>
+    <div id="tiles" class="tiles"></div>
+  </section>
+
+  <aside id="admin" class="drawer" hidden aria-labelledby="admin-heading">
+    <header class="drawer-head">
+      <h2 id="admin-heading">Manage this lab</h2>
+      <button id="admin-close" class="button quiet small">Close</button>
+    </header>
+    <section class="drawer-section">
+      <h3>Reservation</h3>
+      <p id="admin-reservation"></p>
+      <button id="admin-release" class="button danger">Release now</button>
+      <p class="fine">The next reservation waits for the room to settle, as after any release.</p>
+    </section>
+    <section class="drawer-section">
+      <h3>Maintenance</h3>
+      <p id="admin-maintenance-state"></p>
+      <button id="admin-maintenance" class="button"></button>
+      <p class="fine">Maintenance ends the current reservation and refuses new ones, for local tests or work on the lab.</p>
+    </section>
+    <section class="drawer-section">
+      <h3>Signed in</h3>
+      <ul id="admin-users" class="people"></ul>
+    </section>
+    <section class="drawer-section">
+      <h3>Accounts</h3>
+      <p class="fine">Accounts and roles are kept on the lab host, by its administrator:</p>
+      <pre id="admin-commands" class="commands"></pre>
+    </section>
+  </aside>
 </body>
 </html>

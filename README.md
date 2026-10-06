@@ -37,8 +37,8 @@ Browser -> Tailscale HTTPS -> the gateway on the host -> the lab VM's published 
 
 | Part | What it is |
 | --- | --- |
-| [gateway/](gateway) | the gateway: `gateway.py` (the proxy and its portal, for HTTP, event streams and WebSockets), `manage.py` (configure, users, publish, maintenance, firewall), `remote_state.py` (sessions and the reservation, in SQLite), `install-host.sh`, the systemd units and the portal's web files |
-| [tests/](tests) | the gateway's tests: sessions, publication, the firewall in disposable network namespaces, the proxy, and a browser test of the portal with two accounts |
+| [gateway/](gateway) | the gateway: `gateway.py` (the proxy, for HTTP, event streams and WebSockets, and the lab's page), `manage.py` (configure, the lab card, accounts and roles, publish, maintenance, firewall), `remote_state.py` (sessions and the reservation, in SQLite), `install-host.sh`, the systemd units and the lab's page (`web/`: the welcome and management window, every interface in one window) |
+| [tests/](tests) | the gateway's tests: sessions, publication, the firewall in disposable network namespaces, the proxy, and a browser test of the lab's page with three accounts |
 | [docs/](docs) | the setup guide, the reference of what each lab publishes, the proposal |
 | [site/](site) | the explainer site |
 | [pages/](pages) | the site's build; the rest of the Pages workflow is the labs' shared one, in the umbrella |
@@ -59,9 +59,10 @@ cd easymesh-remote
 VM=rdk-MMDD                                 # the lab's VM; the current names: the lab configurations
 sudo bash gateway/install-host.sh          # packages, the service account, the units
 sudo tailscale up
-sudo /opt/easymesh-remote/manage.py --lab "$VM" configure
-sudo /opt/easymesh-remote/manage.py --lab "$VM" add-user alice
-sudo /opt/easymesh-remote/manage.py --lab "$VM" publish --mode private
+LAB=rdk                                     # the configuration: the gateway keeps it across rebuilds
+sudo /opt/easymesh-remote/manage.py --lab "$LAB" configure --vm "$VM"
+sudo /opt/easymesh-remote/manage.py --lab "$LAB" add-user alice --role admin
+sudo /opt/easymesh-remote/manage.py --lab "$LAB" publish --mode private
 ```
 
 To run the tests, on any machine:

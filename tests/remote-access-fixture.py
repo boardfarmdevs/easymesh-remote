@@ -28,6 +28,7 @@ async def main():
         tls = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         tls.load_cert_chain(root / "cert.pem", root / "key.pem")
         now = [1000.0]
+        loads = [0]
 
         async def backend(request):
             if request.path == "/api/demo/interactions":
@@ -37,6 +38,9 @@ async def main():
             if request.path == "/advance":
                 now[0] += float((await request.json())["seconds"])
                 return web.json_response({"now": now[0]})
+            if request.path == "/loads":
+                return web.json_response({"loads": loads[0]})
+            loads[0] += 1
             return web.Response(text="""<!doctype html><title>Lab fixture</title>
                 <button id="probe">Exercise lab</button><p id="result">Ready</p>
                 <script>document.getElementById('probe').onclick = () => {
@@ -49,9 +53,13 @@ async def main():
         application.router.add_route("*", "/{path:.*}", backend)
         upstream = TestServer(application)
         await upstream.start_server()
+        # Both forms of an account: a password hash (an operator) and {"password", "role"}.
         users = {username: password_hash("remote fixture password") for username in ("alice", "bob")}
+        users["carol"] = {"password": password_hash("remote fixture password"), "role": "admin"}
         (root / "users.json").write_text(json.dumps(users))
         config = {"lab": "fixture", "hostname": "localhost", "state_directory": str(root),
+                  "card": {"title": "Fixture lab", "summary": "Three views of one fake lab.", "vm": "fixture-1006",
+                           "host": "localhost", "built": "2026-10-06"},
                   "users_file": str(root / "users.json"), "idle_seconds": 30, "maximum_seconds": 90,
                   "handoff_seconds": 2, "services": {name: {"upstream": str(upstream.make_url("/")).rstrip("/"),
                   "public_port": 0} for name in ("topology", "console", "room")}}
@@ -72,7 +80,8 @@ async def main():
                     site = web.TCPSite(runner, "127.0.0.1", 0, ssl_context=tls)
                     await site.start()
                     config["services"][service]["public_port"] = site._server.sockets[0].getsockname()[1]
-                print(json.dumps({"origins": gateway.origins(), "control": str(upstream.make_url("/advance"))}), flush=True)
+                print(json.dumps({"origins": gateway.origins(), "control": str(upstream.make_url("/advance")),
+                                  "loads": str(upstream.make_url("/loads"))}), flush=True)
                 await stopped.wait()
             finally:
                 for runner in runners:

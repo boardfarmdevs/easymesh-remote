@@ -313,13 +313,34 @@ class SetupTests(unittest.TestCase):
         self.assertEqual(services["console"]["guest_addresses"], ["10.0.0.5", "fd42::5"])
 
     def test_portal_activity_excludes_automatic_polling(self):
-        source = (REMOTE / "web/portal.js").read_text()
-        self.assertIn("!event.isTrusted", source)
-        self.assertIn("document.visibilityState !== 'visible'", source)
-        self.assertIn("!document.hasFocus()", source)
-        self.assertIn("setInterval(refresh, 5000)", source)
-        self.assertNotIn("setInterval(activity", source)
-        self.assertIn("elements.view.contentWindow.document", source)
+        # The page and each tile renew the reservation on genuine input only, the tile in its own view.
+        for name in ("app.js", "tile.js"):
+            source = (REMOTE / "web" / name).read_text()
+            with self.subTest(name=name):
+                self.assertIn("!event.isTrusted", source)
+                self.assertIn("document.visibilityState !== 'visible'", source)
+                self.assertIn("!document.hasFocus()", source)
+                self.assertIn("now - lastActivity < 15000", source)
+                self.assertNotIn("setInterval(activity", source)
+        self.assertIn("setInterval(refresh, 5000)", (REMOTE / "web/app.js").read_text())
+        self.assertIn("view.contentWindow.document", (REMOTE / "web/tile.js").read_text())
+
+    def test_users_file_takes_both_entry_forms(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "users.json"
+            path.write_text(json.dumps({"alice": "scrypt:aa:bb", "carol": {"password": "scrypt:cc:dd", "role": "admin"}}))
+            self.assertEqual(remote_manage.load_users(path), {
+                "alice": {"password": "scrypt:aa:bb", "role": "operator"},
+                "carol": {"password": "scrypt:cc:dd", "role": "admin"}})
+
+    def test_lab_card_from_configuration_and_vm(self):
+        instance = {"metadata": {"created_at": "2026-10-02T09:14:00Z"}}
+        with patch.object(remote_manage, "read_command", return_value=json.dumps(instance)):
+            card = remote_manage.lab_card("rdk-emosa", "rdk-emosa-1002")
+            self.assertEqual((card["title"], card["vm"], card["built"]), ("RDK lab + EMOSA", "rdk-emosa-1002", "2026-10-02"))
+            self.assertIn("OpenSync pods", card["summary"])
+            self.assertEqual(remote_manage.lab_card("prpl-1002", "prpl-1002")["title"], "prplMesh lab")
+            self.assertEqual(remote_manage.lab_card("demo-a", "demo-a", "Demo", "")["title"], "Demo")
 
     def test_firewall_in_isolated_user_and_network_namespaces(self):
         if not all(shutil.which(name) for name in ("unshare", "nft", "ip", "nsenter", "sysctl")):
@@ -479,14 +500,79 @@ class GatewayTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(self.sessions.status(self.alice)["authenticated"])
         self.assertFalse(self.sessions.status()["busy"])
 
-    async def test_views_framed_by_their_own_origin_only(self):
-        # Console NG sends frame-ancestors 'none', which would keep it out of the portal.
+    async def test_views_framed_by_the_labs_own_origins_only(self):
+        # Console NG sends frame-ancestors 'none', which would keep it out of the lab's page.
         self.sessions.acquire(self.alice)
         response = await self.clients["console"].get("/framed", headers=self.headers(service="console"))
         self.assertEqual(response.status, 200)
-        self.assertEqual(response.headers["X-Frame-Options"], "SAMEORIGIN")
-        self.assertEqual(response.headers.getall("Content-Security-Policy"),
-                         ["default-src 'self'", "frame-ancestors 'self'"])
+        self.assertNotIn("X-Frame-Options", response.headers)
+        self.assertEqual(response.headers.getall("Content-Security-Policy"), ["default-src 'self'",
+            "frame-ancestors https://lab.test.ts.net https://lab.test.ts.net:8443 https://lab.test.ts.net:10000"])
+
+    async def test_page_frames_only_tiles_and_tiles_only_their_view(self):
+        page = await self.clients["room"].get("/_remote/", headers=self.headers(service="room"))
+        self.assertEqual(page.status, 200)
+        self.assertEqual(page.headers["X-Frame-Options"], "DENY")
+        policy = page.headers["Content-Security-Policy"]
+        self.assertIn("frame-src https://lab.test.ts.net/_remote/tile https://lab.test.ts.net:8443/_remote/tile "
+                      "https://lab.test.ts.net:10000/_remote/tile;", policy)
+        self.assertIn("frame-ancestors 'none'", policy)
+        self.assertIn("script-src 'self';", policy)
+        tile = await self.clients["room"].get("/_remote/tile", headers=self.headers(service="room"))
+        self.assertEqual(tile.status, 200)
+        self.assertNotIn("X-Frame-Options", tile.headers)
+        policy = tile.headers["Content-Security-Policy"]
+        self.assertIn("frame-src 'self';", policy)
+        self.assertIn("frame-ancestors https://lab.test.ts.net https://lab.test.ts.net:8443 https://lab.test.ts.net:10000", policy)
+        for name in ("app.js", "app.css", "tile.js", "icon.svg"):
+            response = await self.clients["room"].get("/_remote/" + name, headers=self.headers(service="room"))
+            self.assertEqual(response.status, 200, name)
+        for name in ("index.html", "tile.html", "portal.js", "web/app.js", "app.js/"):
+            response = await self.clients["room"].get("/_remote/" + name, headers=self.headers(service="room"))
+            self.assertEqual(response.status, 404, name)
+        self.assertEqual(self.upstream_requests, [])
+
+    async def test_status_tells_the_card_to_everyone_and_the_rest_to_accounts(self):
+        self.config["card"] = {"title": "RDK lab + EMOSA", "summary": "Pods.", "vm": "rdk-emosa-1002",
+                               "host": "rev120", "built": "2026-10-02"}
+        anonymous = await (await self.clients["topology"].get("/_remote/status", headers=self.headers("invalid"))).json()
+        self.assertEqual(anonymous["card"], {"title": "RDK lab + EMOSA", "summary": "Pods."})
+        self.assertEqual(anonymous["views"]["console"]["origin"], "https://lab.test.ts.net:8443")
+        self.assertEqual(anonymous["views"]["room"]["title"], "Room")
+        self.assertEqual(anonymous["rules"], {"idle_seconds": 30, "maximum_seconds": 90, "handoff_seconds": 125})
+        self.assertNotIn("role", anonymous)
+        signed_in = await (await self.clients["topology"].get("/_remote/status", headers=self.headers())).json()
+        self.assertEqual(signed_in["card"]["vm"], "rdk-emosa-1002")
+        self.assertEqual(signed_in["role"], "operator")
+        self.assertNotIn("signed_in", signed_in)
+
+    async def test_only_an_administrator_releases_or_maintains_from_the_page(self):
+        users = json.loads(Path(self.config["users_file"]).read_text())
+        users["carol"] = {"password": password_hash("another long password"), "role": "admin"}
+        Path(self.config["users_file"]).write_text(json.dumps(users))
+        carol = (await (await self.clients["topology"].post("/_remote/login", json={
+            "username": "carol", "password": "another long password"}, headers=self.headers("invalid"))).json())
+        self.assertEqual(carol["role"], "admin")
+        carol_token = self.sessions.login("carol")
+        self.sessions.acquire(self.alice)
+        denied = await self.clients["topology"].post("/_remote/admin", json={"action": "release"}, headers=self.headers(self.bob))
+        self.assertEqual(denied.status, 403)
+        self.assertTrue(self.sessions.status()["busy"])
+        status = await (await self.clients["topology"].get("/_remote/status", headers=self.headers(carol_token))).json()
+        self.assertEqual([entry["username"] for entry in status["signed_in"]], ["alice", "bob", "carol"])
+        released = await self.clients["topology"].post("/_remote/admin", json={"action": "release"}, headers=self.headers(carol_token))
+        self.assertEqual(released.status, 200)
+        self.assertFalse(self.sessions.status(self.alice)["mine"])
+        self.assertEqual(self.sessions.status()["handoff_remaining"], 125)
+        response = await self.clients["topology"].post("/_remote/admin", json={"action": "maintenance-on"}, headers=self.headers(carol_token))
+        self.assertTrue((await response.json())["maintenance"])
+        unknown = await self.clients["topology"].post("/_remote/admin", json={"action": "reboot"}, headers=self.headers(carol_token))
+        self.assertEqual(unknown.status, 400)
+        users["carol"]["role"] = "operator"
+        Path(self.config["users_file"]).write_text(json.dumps(users))
+        demoted = await self.clients["topology"].post("/_remote/admin", json={"action": "maintenance-off"}, headers=self.headers(carol_token))
+        self.assertEqual(demoted.status, 403)
+        self.assertTrue(self.sessions.status()["maintenance"])
 
     async def test_wrong_host_origin_and_cross_site_are_denied(self):
         self.sessions.acquire(self.alice)

@@ -24,6 +24,19 @@ CONFIG_ROOT = Path("/etc/easymesh-remote")
 STATE_ROOT = Path("/var/lib/easymesh-remote")
 DEVICES = {"topology": "easymesh-webui", "console": "wmediumd-console", "room": "room-demo-viewer"}
 PUBLIC_PORTS = {"topology": 443, "console": 8443, "room": 10000}
+# The lab card's defaults, by configuration (the umbrella's lab configurations).
+CONFIGURATIONS = {
+    "rdk": ("RDK EasyMesh lab", "Optimizer development on RDK: the gateway and controller, four Wi-Fi extenders "
+            "and a wired one, 100 room clients, the RF medium and the interactive room."),
+    "prpl": ("prplMesh lab", "The same optimizer lab on native prplMesh, with a wired Agent."),
+    "emosa-osl": ("OpenSync + EMOSA, prplMesh controller", "Adapter development against a prplMesh controller: "
+                  "several pods, the fault workload, the EasyMesh wireless backhaul."),
+    "rdk-emosa": ("RDK lab + EMOSA", "OpenSync pods as EasyMesh agents next to the RDK lab's native agents, "
+                  "in the standard rooms."),
+    "easymesh-lab": ("Physical protocol lab", "The EasyMesh protocol on certified hardware: a controller and "
+                     "teaching panel, two extenders, real clients."),
+}
+ROLES = ("operator", "admin")
 
 
 def command(*arguments, **kwargs):
@@ -95,6 +108,23 @@ def discover_services(vm, local_base):
     return services
 
 
+def lab_card(lab, vm, title=None, summary=None):
+    # A configuration's VMs are named after it and their build date (rdk-emosa-1002).
+    configuration = re.sub(r"-\d{4}[a-z]?$", "", lab)
+    default_title, default_summary = CONFIGURATIONS.get(configuration, (lab, ""))
+    data = json.loads(read_command("lxc", "query", "/1.0/instances/" + vm))
+    created = data.get("metadata", data).get("created_at", "")
+    return {"title": title or default_title, "summary": summary if summary is not None else default_summary,
+            "vm": vm, "host": os.uname().nodename, "built": created[:10]}
+
+
+def load_users(path):
+    users = json.loads(Path(path).read_text())
+    # An entry is a password hash (an operator, as first written) or {"password": ..., "role": ...}.
+    return {name: entry if isinstance(entry, dict) else {"password": entry, "role": "operator"}
+            for name, entry in users.items()}
+
+
 def configure(args):
     config_path = CONFIG_ROOT / (args.lab + ".json")
     if config_path.exists():
@@ -130,6 +160,7 @@ def configure(args):
     if not users_path.exists():
         save_json(users_path, {}, account)
     config = {"lab": args.lab, "vm": args.vm or args.lab, "hostname": hostname,
+              "card": lab_card(args.lab, args.vm or args.lab, args.title, args.summary),
               "services": services, "idle_seconds": args.idle_seconds,
               "maximum_seconds": args.maximum_seconds, "handoff_seconds": args.handoff_seconds,
               "users_file": str(users_path), "state_directory": str(directory)}
@@ -306,8 +337,18 @@ def main():
     setup.add_argument("--idle-seconds", type=int, default=600)
     setup.add_argument("--maximum-seconds", type=int, default=3600)
     setup.add_argument("--handoff-seconds", type=int, default=125)
-    for operation in ("add-user", "remove-user"):
-        commands.add_parser(operation).add_argument("username")
+    card = commands.add_parser("card", help="refresh the lab card: title, summary, the VM's build date")
+    for described in (setup, card):
+        described.add_argument("--title")
+        described.add_argument("--summary")
+    adding = commands.add_parser("add-user", help="add an account or replace its password")
+    adding.add_argument("username")
+    adding.add_argument("--role", choices=ROLES, default="operator")
+    commands.add_parser("remove-user").add_argument("username")
+    role = commands.add_parser("role", help="make an account an operator or an administrator")
+    role.add_argument("username")
+    role.add_argument("role", choices=ROLES)
+    commands.add_parser("users", help="list the accounts, their roles and who is signed in")
     publisher = commands.add_parser("publish")
     publisher.add_argument("--mode", choices=("private", "public"), default="private")
     publisher.add_argument("--confirm-public", action="store_true")
@@ -324,20 +365,36 @@ def main():
     config = json.loads((CONFIG_ROOT / (args.lab + ".json")).read_text())
     sessions = Sessions(Path(config["state_directory"]) / "sessions.sqlite3", config["idle_seconds"],
                         config["maximum_seconds"], config["handoff_seconds"])
-    if args.operation in {"add-user", "remove-user"}:
+    if args.operation in {"add-user", "remove-user", "role"}:
         username = valid_name(args.username)
         path = Path(config["users_file"])
-        users = json.loads(path.read_text())
+        users = load_users(path)
         if args.operation == "add-user":
             password = getpass.getpass("Password (at least 16 characters): ")
             if len(password) < 16 or len(password) > 512 or password != getpass.getpass("Repeat password: "):
                 raise ValueError("Passwords must match and contain 16..512 characters.")
-            users[username] = password_hash(password)
+            users[username] = {"password": password_hash(password), "role": args.role}
+        elif args.operation == "role":
+            if username not in users:
+                raise ValueError(f"No account {username}.")
+            users[username]["role"] = args.role
         else:
             users.pop(username, None)
         save_json(path, users, pwd.getpwnam("easymesh-remote"))
-        sessions.revoke_user(username)
-        print("Credentials updated; existing sessions for this user were revoked.")
+        if args.operation == "role":
+            print(f"{username} is now an {args.role}; the gateway reads roles at each request.")
+        else:
+            sessions.revoke_user(username)
+            print("Credentials updated; existing sessions for this user were revoked.")
+    elif args.operation == "users":
+        signed_in = {entry["username"]: entry["sessions"] for entry in sessions.signed_in()}
+        for name, entry in sorted(load_users(config["users_file"]).items()):
+            print(f"{name:<32} {entry['role']:<9} {signed_in.get(name, 0)} signed-in browser(s)")
+    elif args.operation == "card":
+        config["card"] = lab_card(config["lab"], config["vm"], args.title, args.summary)
+        save_json(CONFIG_ROOT / (args.lab + ".json"), config, pwd.getpwnam("easymesh-remote"))
+        print(json.dumps(config["card"], indent=2))
+        print(f"Restart easymesh-remote@{args.lab} to show it.")
     elif args.operation == "publish":
         publish(config, args.mode, args.confirm_public)
     elif args.operation == "unpublish":

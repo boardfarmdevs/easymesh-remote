@@ -22,6 +22,15 @@ HOP_HEADERS = {"connection", "keep-alive", "proxy-authenticate", "proxy-authoriz
                "te", "trailer", "transfer-encoding", "upgrade", "content-length"}
 ASSETS = Path(__file__).with_name("web")
 LOGGER = logging.getLogger("easymesh.remote")
+# The portal's files: the welcome and workspace page, and the tile that frames one view on its own origin.
+PAGES = {"": "index.html", "tile": "tile.html"}
+FILES = {"app.js", "app.css", "tile.js", "icon.svg"}
+VIEWS = {
+    "topology": ("Controller", "The EasyMesh controller's interface and API: topology, clients and steering."),
+    "console": ("Console NG", "The RF medium, live and read-only: every path between radios and clients."),
+    "room": ("Room", "The interactive room: move clients, play scenarios, watch the optimizer converge."),
+}
+ROLES = {"operator", "admin"}
 
 
 def filtered_headers(headers):
@@ -57,6 +66,19 @@ class Gateway:
     def origins(self):
         return {name: "https://" + self.config["hostname"] + ("" if settings["public_port"] == 443 else
                 ":" + str(settings["public_port"])) for name, settings in self.config["services"].items()}
+
+    def frame_ancestors(self):
+        # Each view keeps its own origin; the lab's page frames it from any of the lab's origins.
+        return "frame-ancestors " + " ".join(self.origins().values())
+
+    def account(self, username):
+        """The password hash and role of an account, or (None, None). Read at each use: revocation is immediate."""
+        entry = json.loads(Path(self.config["users_file"]).read_text()).get(username)
+        if isinstance(entry, str):
+            return entry, "operator"
+        if isinstance(entry, dict) and isinstance(entry.get("password"), str) and entry.get("role", "operator") in ROLES:
+            return entry["password"], entry.get("role", "operator")
+        return None, None
 
     def validate_origin(self, request, service):
         expected = self.origins()[service]
@@ -95,24 +117,46 @@ class Gateway:
 
     def public_status(self, token, service):
         status = self.sessions.status(token)
+        card = self.config.get("card", {})
+        lab = {"title": card.get("title") or self.config["lab"], "summary": card.get("summary", "")}
         if not status["authenticated"]:
             status = {"authenticated": False, "mine": False}
+        else:
+            status["role"] = self.account(status["username"])[1] or "operator"
+            if status["role"] == "admin":
+                status["signed_in"] = self.sessions.signed_in()
+            lab.update({key: card[key] for key in ("vm", "host", "built") if card.get(key)})
+        origins = self.origins()
         return {**status, "schema": "easymesh.remote.session.v1", "lab": self.config["lab"], "service": service,
-                "links": {name: origin + "/_remote/" for name, origin in self.origins().items()}}
+                "links": {name: origin + "/_remote/" for name, origin in origins.items()},
+                "card": lab,
+                "views": {name: {"title": VIEWS.get(name, (name, ""))[0], "summary": VIEWS.get(name, (name, ""))[1],
+                                 "origin": origin} for name, origin in origins.items()},
+                "rules": {key: self.config[key] for key in ("idle_seconds", "maximum_seconds", "handoff_seconds")}}
+
+    def asset(self, suffix):
+        response = web.FileResponse(ASSETS / PAGES.get(suffix, suffix))
+        response.headers.update({"Cache-Control": "no-store", "Referrer-Policy": "no-referrer",
+                                 "X-Content-Type-Options": "nosniff"})
+        base = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; object-src 'none'; " \
+               "base-uri 'none'; form-action 'self'; "
+        if suffix == "tile":
+            # Framed by the lab's page from any of its origins; frames its own view only.
+            response.headers["Content-Security-Policy"] = base + "frame-src 'self'; " + self.frame_ancestors()
+        else:
+            response.headers["X-Frame-Options"] = "DENY"
+            response.headers["Content-Security-Policy"] = base + "frame-src " + " ".join(
+                origin + "/_remote/tile" for origin in self.origins().values()) + "; frame-ancestors 'none'"
+        return response
 
     async def portal(self, request, service):
         suffix = request.path.removeprefix("/_remote/")
-        if request.method == "GET" and suffix in {"", "portal.js", "portal.css"}:
-            response = web.FileResponse(ASSETS / (suffix or "index.html"))
-            response.headers.update({"Cache-Control": "no-store", "X-Frame-Options": "DENY",
-                "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self'; "
-                "frame-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'none'; form-action 'self'",
-                "Referrer-Policy": "no-referrer", "X-Content-Type-Options": "nosniff"})
-            return response
+        if request.method == "GET" and (suffix in PAGES or suffix in FILES):
+            return self.asset(suffix)
         token = self.session_token(request)
         if request.method == "GET" and suffix == "status":
             return web.json_response(self.public_status(token, service), headers={"Cache-Control": "no-store"})
-        if request.method != "POST" or suffix not in {"login", "acquire", "activity", "release", "logout"}:
+        if request.method != "POST" or suffix not in {"login", "acquire", "activity", "release", "logout", "admin"}:
             raise web.HTTPNotFound()
         if request.content_type != "application/json" or request.content_length is None or request.content_length > 4096:
             raise web.HTTPBadRequest(text="A small JSON body is required.")
@@ -133,12 +177,10 @@ class Gateway:
                 raise web.HTTPTooManyRequests(text="Too many sign-in attempts; wait one minute.",
                                              headers={"Retry-After": "60"})
             self.login_attempts.append((now, username))
-            users = json.loads(Path(self.config["users_file"]).read_text())
-            encoded = users.get(username, self.dummy_password)
+            encoded = self.account(username)[0]
             async with self.login_limit:
-                matched = await asyncio.to_thread(password_matches, password, encoded)
-            latest_users = json.loads(Path(self.config["users_file"]).read_text())
-            if username not in users or not matched or latest_users.get(username) != encoded:
+                matched = await asyncio.to_thread(password_matches, password, encoded or self.dummy_password)
+            if not encoded or not matched or self.account(username)[0] != encoded:
                 LOGGER.warning("login rejected")
                 raise web.HTTPUnauthorized(text="Invalid username or password.")
             token = self.sessions.login(username)
@@ -161,6 +203,17 @@ class Gateway:
                 self.sessions.release(token)
             elif suffix == "logout":
                 self.sessions.logout(token)
+            elif suffix == "admin":
+                if self.account(status["username"])[1] != "admin":
+                    raise PermissionError("Only an administrator can do this.")
+                action = body.get("action")
+                if action == "release":
+                    self.sessions.release(force=True)
+                elif action in {"maintenance-on", "maintenance-off"}:
+                    self.sessions.set_maintenance(action == "maintenance-on")
+                else:
+                    raise web.HTTPBadRequest(text="Unknown administrative action.")
+                suffix = "admin " + action
         except BlockingIOError as error:
             raise web.HTTPConflict(text=str(error)) from error
         except PermissionError as error:
@@ -243,14 +296,15 @@ class Gateway:
             outgoing = filtered_headers(response.headers)
             outgoing["Cache-Control"] = "no-store"
             outgoing["Referrer-Policy"] = "same-origin"
-            outgoing["X-Frame-Options"] = "SAMEORIGIN"
-            # The portal frames each view from its own origin; an upstream frame-ancestors would override that.
+            # The lab's page frames each view (in a tile on the view's own origin) from any of the lab's
+            # origins; an upstream frame-ancestors or X-Frame-Options (Console NG: 'none') would forbid it.
+            outgoing.popall("X-Frame-Options", None)
             for policy in outgoing.popall("Content-Security-Policy", []):
                 kept = "; ".join(part.strip() for part in policy.split(";")
                                  if part.strip() and part.split()[0].lower() != "frame-ancestors")
                 if kept:
                     outgoing.add("Content-Security-Policy", kept)
-            outgoing.add("Content-Security-Policy", "frame-ancestors 'self'")
+            outgoing.add("Content-Security-Policy", self.frame_ancestors())
             outgoing.popall("Set-Cookie", None)
             for value in response.headers.getall("Set-Cookie", []):
                 cookies = SimpleCookie()
