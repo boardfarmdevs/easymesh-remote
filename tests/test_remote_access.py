@@ -318,6 +318,7 @@ class GatewayTests(unittest.IsolatedAsyncioTestCase):
         self.gateway.client = self.client
         self.upstream_requests = []
         self.local_lease = {"held": False}
+        self.lease_parts = 0
         self.upstream = TestServer(web.Application())
         self.upstream.app.router.add_route("*", "/{path:.*}", self.upstream_handler)
         await self.upstream.start_server()
@@ -340,7 +341,22 @@ class GatewayTests(unittest.IsolatedAsyncioTestCase):
     async def upstream_handler(self, request):
         self.upstream_requests.append({"path": request.raw_path, "headers": dict(request.headers)})
         if request.path == "/api/demo/interactions":
-            return web.json_response({"schema": "easymesh.room-demo.interactions.v1", "enabled": True, "lease": self.local_lease})
+            snapshot = {"schema": "easymesh.room-demo.interactions.v1", "enabled": True, "lease": self.local_lease}
+            if not self.lease_parts:
+                return web.json_response(snapshot)
+            body = json.dumps({**snapshot, "roles": ["sta_static_01"] * 2000}).encode()
+            response = web.StreamResponse(headers={"Content-Type": "application/json"})
+            response.content_length = len(body)
+            await response.prepare(request)
+            step = len(body) // self.lease_parts + 1
+            for start in range(0, len(body), step):
+                await response.write(body[start:start + step])
+                await asyncio.sleep(.01)
+            await response.write_eof()
+            return response
+        if request.path == "/framed":
+            return web.Response(text="<!doctype html>", content_type="text/html",
+                                headers={"Content-Security-Policy": "default-src 'self'; frame-ancestors 'none'"})
         if request.path == "/socket":
             socket = web.WebSocketResponse()
             await socket.prepare(request)
@@ -405,6 +421,15 @@ class GatewayTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(upstream["Host"], "lab.test.ts.net")
         self.assertEqual(upstream["Origin"], "https://lab.test.ts.net")
 
+    async def test_views_framed_by_their_own_origin_only(self):
+        # Console NG sends frame-ancestors 'none', which would keep it out of the portal.
+        self.sessions.acquire(self.alice)
+        response = await self.clients["console"].get("/framed", headers=self.headers(service="console"))
+        self.assertEqual(response.status, 200)
+        self.assertEqual(response.headers["X-Frame-Options"], "SAMEORIGIN")
+        self.assertEqual(response.headers.getall("Content-Security-Policy"),
+                         ["default-src 'self'", "frame-ancestors 'self'"])
+
     async def test_wrong_host_origin_and_cross_site_are_denied(self):
         self.sessions.acquire(self.alice)
         for field, value in (("Host", "evil.invalid"), ("Origin", "https://evil.invalid"),
@@ -450,6 +475,13 @@ class GatewayTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.status, 200)
         self.assertTrue((await response.json())["mine"])
         self.assertEqual(self.upstream_requests[0]["path"], "/api/demo/interactions")
+
+    async def test_native_lease_read_whole_when_it_arrives_in_parts(self):
+        # The live room's snapshot is about 27 KB and arrives in several reads.
+        self.lease_parts = 8
+        response = await self.clients["topology"].post("/_remote/acquire", json={}, headers=self.headers())
+        self.assertEqual(response.status, 200)
+        self.assertTrue((await response.json())["mine"])
 
     async def test_wrong_login_rate_limited(self):
         for index in range(6):

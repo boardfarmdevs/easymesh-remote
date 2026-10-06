@@ -42,7 +42,8 @@ async def main():
                 <script>document.getElementById('probe').onclick = () => {
                   document.getElementById('result').textContent = 'Clicked';
                 }; setInterval(() => fetch('/api/echo').catch(() => {}), 200);</script>""",
-                                content_type="text/html")
+                                content_type="text/html",
+                                headers={"Content-Security-Policy": "frame-ancestors 'none'"})
 
         application = web.Application()
         application.router.add_route("*", "/{path:.*}", backend)

@@ -177,9 +177,11 @@ class Gateway:
         async with self.client.get(url, timeout=ClientTimeout(total=5), allow_redirects=False) as response:
             if response.status != 200:
                 raise web.HTTPServiceUnavailable(text="Room availability cannot be verified; acquisition refused.")
-            body = await response.content.read(2 * 1024 * 1024 + 1)
-            if len(body) > 2 * 1024 * 1024:
-                raise web.HTTPServiceUnavailable(text="Room availability response is too large.")
+            body = bytearray()
+            async for chunk in response.content.iter_any():
+                body.extend(chunk)
+                if len(body) > 2 * 1024 * 1024:
+                    raise web.HTTPServiceUnavailable(text="Room availability response is too large.")
             try:
                 snapshot = json.loads(body)
                 lease = snapshot["lease"]
@@ -240,6 +242,13 @@ class Gateway:
             outgoing["Cache-Control"] = "no-store"
             outgoing["Referrer-Policy"] = "same-origin"
             outgoing["X-Frame-Options"] = "SAMEORIGIN"
+            # The portal frames each view from its own origin; an upstream frame-ancestors would override that.
+            for policy in outgoing.popall("Content-Security-Policy", []):
+                kept = "; ".join(part.strip() for part in policy.split(";")
+                                 if part.strip() and part.split()[0].lower() != "frame-ancestors")
+                if kept:
+                    outgoing.add("Content-Security-Policy", kept)
+            outgoing.add("Content-Security-Policy", "frame-ancestors 'self'")
             outgoing.popall("Set-Cookie", None)
             for value in response.headers.getall("Set-Cookie", []):
                 cookies = SimpleCookie()
