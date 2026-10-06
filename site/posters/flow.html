@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How a lab is reached</title>
+<link rel="icon" href="../icon.svg" type="image/svg+xml">
+<meta name="description" content="How an EasyMesh lab is reached from anywhere, drawn whole: the browser, Tailscale, the lab's own device and its gateway on the lab host, the reservation, the lab's VM and the lab network, with every address, identity and timer. rdk-emosa on rev120, 6 October 2026.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://mesh.vcpe.dev/posters/posters.css">
+</head>
+<body>
+<main class="poster">
+  <header class="masthead">
+    <p class="eyebrow">boardfarmdevs · EasyMesh labs · remote access · how it works · 6 October 2026</p>
+    <h1>How a lab is reached</h1>
+    <p>From a browser anywhere to the lab's interfaces inside its VM, and what decides who gets
+    through. Everything of remote access runs on the <b>lab host</b>, next to the lab: nothing
+    is added to the lab's VM. Drawn as running for <b>rdk-emosa</b> on rev120.</p>
+    <nav><a href="people.html">← Who does what</a> <a href="../index.html">The explainer</a> <a href="https://github.com/boardfarmdevs/easymesh-remote/blob/main/docs/guides/setup.md">The setup guide</a> <a href="https://mesh.vcpe.dev/">Home</a></nav>
+  </header>
+
+  <section class="stage-hosts" aria-label="Where it runs">
+    <div class="host"><h3>rev120 · the lab host</h3><p>Runs the lab's VM and, beside it, all of
+    remote access: the lab's Tailscale device, its gateway and its firewall, from one
+    installation in <code>/opt/easymesh-remote</code>. Operators reach it over SSH.</p></div>
+    <div class="host"><h3>rdk-emosa · the lab</h3><p>The RDK lab with EMOSA, named after its
+    configuration. Its VM now is <code>rdk-emosa-1002</code>: the controller's interface
+    <code>:8888</code>, Console NG <code>:8890</code>, the room <code>:8891</code>, published
+    on the host as <code>192.168.2.120:20110/1/2</code>.</p></div>
+    <div class="host"><h3>rdk-emosa.&lt;tailnet&gt;.ts.net</h3><p>The lab's own address since
+    6 October: a Tailscale device of the lab's, on the host, kept across rebuilds. Ports
+    <code>443</code>, <code>8443</code>, <code>10000</code>; nothing else answers on it.</p></div>
+    <div class="host"><h3>easymesh-remote</h3><p>The code: <code>gateway/</code>
+    (<code>gateway.py</code>, <code>manage.py</code>, the page, the units), its tests, the setup
+    guide and the proposal with the requirements of 6 October.</p></div>
+  </section>
+
+  <section class="diagram" aria-label="From the browser to the lab">
+    <h3>From the browser to the lab, end to end</h3>
+    <div class="diagram-scroll">
+    <svg viewBox="0 0 1400 830" role="img" aria-labelledby="flow-title flow-desc">
+      <title id="flow-title">Remote access to rdk-emosa: a browser anywhere, Tailscale, and on the lab host rev120 the lab's own Tailscale device, the gateway, the firewall, the LXD proxy devices and the lab's VM with its three interfaces; the host's own services and the lab network beside them</title>
+      <desc id="flow-desc">Four numbered paths: 1, the browser over Tailscale to the lab's device on ports 443, 8443 and 10000, and on to the gateway; 2, a reservation, for which the gateway first asks the room whether someone holds it locally; 3, the gateway forwarding the one reserved browser's requests through the host's LXD proxy devices to the controller, Console NG and the room in the VM; 4, the lab network reaching the same proxy devices directly, open while the lab is private and closed by the firewall for a public lab.</desc>
+
+      <!-- anywhere -->
+      <g class="umbrella">
+        <rect class="zone dashed" x="16" y="40" width="246" height="330" rx="14"/>
+        <text class="zt" x="32" y="68">Anywhere</text>
+        <text class="zs" x="32" y="88">a browser · a program, next</text>
+        <rect class="sub" x="32" y="104" width="214" height="152" rx="10"/>
+        <rect class="chip" x="32" y="104" width="214" height="26" rx="10"/>
+        <text class="ct" x="44" y="122">rdk-emosa.&lt;tailnet&gt;.ts.net</text>
+        <rect class="chip" x="42" y="140" width="60" height="104" rx="6"/>
+        <rect class="chip" x="110" y="140" width="60" height="104" rx="6"/>
+        <rect class="chip" x="178" y="140" width="60" height="104" rx="6"/>
+        <text class="t" x="72" y="180" text-anchor="middle">room</text>
+        <text class="t" x="140" y="180" text-anchor="middle">ctrl</text>
+        <text class="t" x="208" y="180" text-anchor="middle">medium</text>
+        <text class="b" x="32" y="284">the lab's page</text>
+        <text class="t" x="32" y="304">every interface, one window</text>
+        <text class="t" x="32" y="324">on the tailnet, or a shared</text>
+        <text class="t" x="32" y="342">lab device; Funnel later</text>
+      </g>
+
+      <!-- tailscale -->
+      <g class="optimizer">
+        <rect class="zone" x="300" y="40" width="200" height="330" rx="14"/>
+        <text class="zt" x="316" y="68">Tailscale</text>
+        <text class="zs" x="316" y="88">one tailnet, one account</text>
+        <rect class="chip" x="316" y="108" width="168" height="34" rx="8"/>
+        <text class="ct" x="328" y="130">Serve · private</text>
+        <rect class="chip" x="316" y="150" width="168" height="34" rx="8"/>
+        <text class="ct" x="328" y="172">Funnel · later</text>
+        <text class="t" x="316" y="226">HTTPS, a certificate</text>
+        <text class="t" x="316" y="244">for each lab's name</text>
+        <text class="t" x="316" y="270">no port forwarded</text>
+        <text class="t" x="316" y="288">on any router</text>
+        <text class="t" x="316" y="314">devices: rev120 (host),</text>
+        <text class="t" x="316" y="332">rdk-emosa (lab)</text>
+      </g>
+
+      <!-- the lab network -->
+      <g class="rdk">
+        <rect class="zone dashed" x="16" y="420" width="246" height="170" rx="14"/>
+        <text class="zt" x="32" y="448">The lab network</text>
+        <text class="zs" x="32" y="468">trusted (Q3)</text>
+        <text class="t" x="32" y="498">192.168.2.120:20110–20112</text>
+        <text class="t" x="32" y="518">bookmarks, rev150's suites</text>
+        <text class="t" x="32" y="546">the same reservation:</text>
+        <text class="t" x="32" y="564">local tools take it, next</text>
+      </g>
+
+      <!-- the host -->
+      <g class="umbrella">
+        <text class="st" x="546" y="28">rev120 · the lab host · one installation, one set of units per lab</text>
+        <rect class="frame" x="530" y="36" width="856" height="780" rx="18"/>
+      </g>
+
+      <g class="remote">
+        <rect class="zone" x="552" y="60" width="270" height="220" rx="14"/>
+        <text class="zt" x="568" y="86">The lab's device</text>
+        <text class="zs" x="568" y="106">tailscaled · userspace · its own</text>
+        <rect class="chip" x="568" y="120" width="238" height="28" rx="7"/>
+        <text class="ct" x="580" y="139">:443 · the controller</text>
+        <rect class="chip" x="568" y="154" width="238" height="28" rx="7"/>
+        <text class="ct" x="580" y="173">:8443 · Console NG</text>
+        <rect class="chip" x="568" y="188" width="238" height="28" rx="7"/>
+        <text class="ct" x="580" y="207">:10000 · the room</text>
+        <text class="t" x="568" y="242">loopback denied but 127.77/16</text>
+        <text class="t" x="568" y="260">identity kept on the host</text>
+      </g>
+
+      <g class="remote">
+        <rect class="zone" x="850" y="60" width="516" height="220" rx="14"/>
+        <text class="zt" x="866" y="86">The gateway</text>
+        <text class="zs" x="866" y="106">easymesh-remote@rdk-emosa · 127.77.136.185</text>
+        <rect class="chip" x="866" y="122" width="240" height="64" rx="8"/>
+        <text class="ct" x="878" y="146">sign-in</text>
+        <text class="t" x="878" y="168">accounts: operator, admin</text>
+        <rect class="chip" x="1112" y="122" width="240" height="64" rx="8"/>
+        <text class="ct" x="1124" y="146">the lab's page</text>
+        <text class="t" x="1124" y="168">welcome · one window</text>
+        <rect class="chip" x="866" y="196" width="240" height="64" rx="8"/>
+        <text class="ct" x="878" y="220">the proxy</text>
+        <text class="t" x="878" y="242">HTTP · SSE · WebSocket</text>
+        <rect class="chip" x="1112" y="196" width="240" height="64" rx="8"/>
+        <text class="ct" x="1124" y="220">the reservation</text>
+        <text class="t" x="1124" y="242">one slot · SQLite</text>
+      </g>
+
+      <g class="phys">
+        <rect class="zone dashed" x="552" y="310" width="814" height="64" rx="12"/>
+        <text class="zt" x="568" y="336">The firewall</text>
+        <text class="zs" x="568" y="356">only for a public lab, or --close-lan: before LXD's NAT</text>
+      </g>
+
+      <g class="umbrella">
+        <rect class="zone dashed" x="552" y="404" width="270" height="200" rx="14"/>
+        <text class="zt" x="568" y="430">The host's own</text>
+        <text class="zs" x="568" y="450">not on the lab's name</text>
+        <text class="t" x="568" y="478">rev120.&lt;tailnet&gt;.ts.net</text>
+        <text class="t" x="568" y="496">the operators: SSH, lxc</text>
+        <text class="t" x="568" y="524">Apache *:443, sshd, CUPS</text>
+        <text class="t" x="568" y="542">refused on the lab's name</text>
+        <text class="t" x="568" y="570">manage.py · /opt/easymesh-remote</text>
+      </g>
+
+      <g class="rdk">
+        <rect class="zone dashed" x="850" y="404" width="516" height="96" rx="12"/>
+        <text class="zt" x="1010" y="430">LXD proxy devices</text>
+        <text class="zs" x="1010" y="450">the lab's ports on the host</text>
+        <text class="t" x="1010" y="476">20110 → 8888 · 20111 → 8890 · 20112 → 8891</text>
+      </g>
+
+      <g class="rdk">
+        <rect class="zone" x="850" y="530" width="516" height="270" rx="14"/>
+        <text class="zt" x="1010" y="556">rdk-emosa-1002</text>
+        <text class="zs" x="1010" y="574">the lab's VM, unchanged</text>
+        <rect class="sub" x="866" y="606" width="156" height="120" rx="10"/>
+        <text class="b" x="878" y="632">the controller</text>
+        <text class="t" x="878" y="652">em_cli :8888</text>
+        <text class="t" x="878" y="670">topology, steering</text>
+      </g>
+      <g class="medium">
+        <rect class="sub" x="1034" y="606" width="156" height="120" rx="10"/>
+        <text class="b" x="1046" y="632">Console NG</text>
+        <text class="t" x="1046" y="652">:8890</text>
+        <text class="t" x="1046" y="670">the medium, live</text>
+        <rect class="sub" x="1202" y="606" width="156" height="120" rx="10"/>
+        <text class="b" x="1214" y="632">the room</text>
+        <text class="t" x="1214" y="652">:8891</text>
+        <text class="t" x="1214" y="670">its own lease</text>
+      </g>
+      <g class="rdk">
+        <text class="t" x="866" y="760">gateway · extenders · 2 pods · 20 clients · wmediumd</text>
+        <text class="t" x="866" y="780">10.77.171.249, on the host's LXD bridge</text>
+        <text class="t" x="560" y="708">open while the lab is private (Q3)</text>
+        <text class="t" x="560" y="744">closed by the firewall for a public lab</text>
+      </g>
+
+      <!-- the flows -->
+      <path class="flow optimizer" d="M246,200 H552 M822,200 H850"/>
+      <path class="flow builder dash" d="M1340,260 V606"/>
+      <path class="flow medium" d="M990,260 V588 M990,588 H944 V606 M990,588 H1112 V606 M990,588 H1258 V606"/>
+      <path class="flow rdk dash" d="M262,520 H420 V720 H836 V452 H850"/>
+      <g class="badge optimizer"><circle cx="281" cy="200" r="13"/><text x="281" y="200">1</text></g>
+      <g class="badge builder"><circle cx="1340" cy="389" r="13"/><text x="1340" y="389">2</text></g>
+      <g class="badge medium"><circle cx="990" cy="389" r="13"/><text x="990" y="389">3</text></g>
+      <g class="badge rdk"><circle cx="330" cy="520" r="13"/><text x="330" y="520">4</text></g>
+    </svg>
+    </div>
+    <div class="legend">
+      <span class="optimizer"><i></i>1 · reach: the browser over Tailscale to the lab's device and its gateway</span>
+      <span class="builder"><i class="dash"></i>2 · reserve: the room asked first whether someone holds it locally</span>
+      <span class="medium"><i></i>3 · use: the gateway forwards the one reserved browser to the lab</span>
+      <span class="rdk"><i class="dash"></i>4 · the lab network: open while private, closed for a public lab</span>
+    </div>
+  </section>
+
+  <section class="journeys" aria-label="The four paths">
+    <article class="journey optimizer">
+      <h3><span class="num">1</span>Reach</h3>
+      <p>Nothing on any router is opened. The lab's address only exists on the tailnet.</p>
+      <ol class="steps">
+        <li>The browser opens <code>https://rdk-emosa.&lt;tailnet&gt;.ts.net/_remote/</code>. Tailscale carries it, peer to peer or through a relay, with a certificate for the lab's own name.</li>
+        <li>It arrives at the lab's device: a <code>tailscaled</code> of the lab's own on rev120, beside the host's. Serve answers on 443, 8443 and 10000 only; any other port of the lab's name is refused.</li>
+        <li>Serve hands each port to the gateway on the lab's loopback address, <code>127.77.136.185:40285–40287</code>. The device may reach nothing else on the host's loopback (its systemd unit says so).</li>
+        <li>The gateway checks the host name and, for every write, the origin: nothing from another site gets in.</li>
+      </ol>
+    </article>
+    <article class="journey builder">
+      <h3><span class="num">2</span>Sign in and reserve</h3>
+      <p>One person drives the lab; everyone signed in can see who.</p>
+      <ol class="steps">
+        <li>Sign-in: the account's password checked against its scrypt hash (<code>rdk-emosa.users.json</code>); a random session token in a <code>__Host-</code> cookie, kept 8 hours. Five tries a minute per name.</li>
+        <li><b>Reserve</b>: the gateway asks the room (<code>/api/demo/interactions</code>) whether someone holds it locally; if so, it refuses.</li>
+        <li>One slot in SQLite takes the reservation: this browser's session, an idle deadline (10 minutes) and a hard one (60).</li>
+        <li>It ends by release, sign-out, idle, the limit, an admin or maintenance; open streams close within a second, and the next reservation waits 125 s.</li>
+      </ol>
+    </article>
+    <article class="journey medium">
+      <h3><span class="num">3</span>Use</h3>
+      <p>Each interface keeps its own address; the page frames them, the gateway carries them.</p>
+      <ol class="steps">
+        <li>Every request of the reserved browser is forwarded: plain HTTP, the room's event stream, the controller's and Console NG's WebSockets. Anyone else gets 423.</li>
+        <li>The gateway removes its own cookie and any identity headers before the lab, and lets only the lab's own origins frame what it returns.</li>
+        <li>It reaches the lab through the host's LXD proxy devices, <code>192.168.2.120:20110–20112</code>, which NAT into the VM's <code>:8888</code>, <code>:8890</code>, <code>:8891</code>.</li>
+        <li>In the page each interface sits in a tile on its own origin; the tile sees real input there and renews the reservation.</li>
+      </ol>
+    </article>
+    <article class="journey rdk">
+      <h3><span class="num">4</span>The lab network</h3>
+      <p>Trusted (requirement Q3): what the lab offered on it before still works.</p>
+      <ol class="steps">
+        <li>On the LAN the lab's ports answer as before: bookmarks, and rev150's room suites against this lab.</li>
+        <li>Someone there can drive the lab while a remote person holds it: run local work under maintenance until local tools take the reservation (step 6).</li>
+        <li>A lab published publicly, or with <code>--close-lan</code>, gets the firewall: a table of its own drops traffic from the network to its ports and to the VM's addresses, before LXD's NAT.</li>
+        <li>The host's own connections always pass: the gateway's, and an operator's SSH tunnel.</li>
+      </ol>
+    </article>
+  </section>
+
+  <section class="stage-panels" aria-label="Addresses, identities and timers">
+    <div class="panel">
+      <h3>Addresses and ports</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Public</th><th>What</th><th>Gateway → host → VM</th></tr></thead>
+          <tbody>
+            <tr><td><code>rdk-emosa.&lt;tailnet&gt;.ts.net</code></td><td>the controller's interface and API</td><td><code>:40285 → 192.168.2.120:20110 → 10.77.171.249:8888</code></td></tr>
+            <tr><td><code>…:8443</code></td><td>Console NG</td><td><code>:40286 → :20111 → :8890</code></td></tr>
+            <tr><td><code>…:10000</code></td><td>the room, its API and its events</td><td><code>:40287 → :20112 → :8891</code></td></tr>
+            <tr><td><code>/_remote/</code> on each</td><td>the lab's page, its status, sign-in and reservation</td><td>the gateway itself</td></tr>
+            <tr><td><code>/_remote/tile</code></td><td>one interface, framed on its own origin</td><td>the gateway itself</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3 style="margin-top:18px">Identities</h3>
+      <div class="table-wrap">
+        <table>
+          <tbody>
+            <tr><td>the host's Tailscale device</td><td><code>rev120.&lt;tailnet&gt;.ts.net</code>: operators, SSH</td></tr>
+            <tr><td>the lab's Tailscale device</td><td><code>rdk-emosa.&lt;tailnet&gt;.ts.net</code>: the lab's three interfaces, nothing else</td></tr>
+            <tr><td>gateway accounts</td><td><code>rob</code> (admin), team members (operators); per lab, on the host</td></tr>
+            <tr><td>a browser's session</td><td>a random token, stored only as a hash; 8 hours</td></tr>
+            <tr><td>next (Q1, Q2)</td><td>the team's Tailscale identity; keys for programs</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>The clock</h3>
+      <div class="meters">
+        <div class="meter remote"><div class="row"><b>a reservation, at most</b><span>60 min</span></div><div class="bar"><i style="width:100%"></i></div></div>
+        <div class="meter remote"><div class="row"><b>without real input</b><span>10 min, renewed by any click</span></div><div class="bar"><i style="width:16.7%"></i></div></div>
+        <div class="meter builder"><div class="row"><b>the handoff, after any end</b><span>125 s</span></div><div class="bar"><i style="width:3.5%"></i></div></div>
+        <div class="meter medium"><div class="row"><b>the room's own lease, at most</b><span>120 s</span></div><div class="bar"><i style="width:3.3%"></i></div></div>
+        <div class="meter umbrella"><div class="row"><b>activity sent, at most once per</b><span>15 s</span></div><div class="bar"><i style="width:0.4%"></i></div></div>
+      </div>
+      <p style="font-size:12.5px;color:var(--muted);margin:12px 0 0">Bars against the 60-minute limit. A sign-in lasts 8 hours; the page asks the gateway every 5 s. Programs will get reservations of hours (Q2).</p>
+      <h3 style="margin-top:18px">On the host, per lab</h3>
+      <div class="table-wrap">
+        <table>
+          <tbody>
+            <tr><td><code>easymesh-remote-tailscale@rdk-emosa</code></td><td>the lab's device; its identity in <code>/var/lib/easymesh-remote-tailscale/</code></td></tr>
+            <tr><td><code>easymesh-remote@rdk-emosa</code></td><td>the gateway; <code>/etc/easymesh-remote/rdk-emosa.json</code></td></tr>
+            <tr><td><code>easymesh-remote-firewall@rdk-emosa</code></td><td>the LAN closed: off while private</td></tr>
+            <tr><td><code>/var/lib/easymesh-remote/rdk-emosa</code></td><td>the sessions and the reservation</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="stage-panels" aria-label="This stage">
+    <div class="panel">
+      <h3>This stage · 2 to 6 October 2026</h3>
+      <div class="results">
+        <div class="result remote"><b>3 / 3</b><span>interfaces side by side over the tailnet, with their streams</span></div>
+        <div class="result phys"><b>5</b><span>bugs found against the live lab, all fixed</span></div>
+        <div class="result optimizer"><b>56</b><span>tests on the hosts' aiohttp 3.8 and 3.9 and the latest, and a browser test with three accounts</span></div>
+        <div class="result medium"><b>3</b><span>ports on the lab's name; the host's SSH and web server refused</span></div>
+      </div>
+      <ul class="timeline">
+        <li class="remote">The gateway moved here from the RDK lab (2 October)<small>built there in September, used by nobody yet</small></li>
+        <li class="phys">Run against the live lab (6 October)<small>the room's 27 KB lease read only in part, so no reservation could succeed; Console NG's <code>frame-ancestors 'none'</code> kept it out of the page</small></li>
+        <li class="phys">Installed on rev120, published privately<small>sign-out failed on Ubuntu's aiohttp; Apache on <code>*:443</code> held the host's port 443, and publish now checks each public URL; aiohttp has no 423, so the gateway has its own</small></li>
+        <li class="remote">The lab's page<small>the welcome with the lab card, every interface in one window, operators and admins</small></li>
+        <li class="optimizer">The lab's own address<small>a Tailscale device per lab on its host; Tailscale Services would need a tagged host, Tailscale in the VM would expose the VM</small></li>
+        <li class="umbrella">The requirements confirmed<small>the team first, programs soon, the lab network trusted, <code>retarget</code> after each rebuild, no public access yet</small></li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>Open</h3>
+      <ul class="timeline">
+        <li class="open">The team's Tailscale sign-in<small>step 5: no second password for someone the tailnet already knows</small></li>
+        <li class="open">Programs and suites<small>step 6: keys, reservations of hours, the suites' reservation in place of maintenance</small></li>
+        <li class="open">The builds run <code>retarget</code><small>rdk-emosa-1005 runs beside 1002 since this morning, not yet served</small></li>
+        <li class="open">The other labs<small>step 7: prplMesh and OpenSync + EMOSA name their interfaces differently</small></li>
+        <li class="open">Funnel never tried<small>no public access until a partner asks (Q5)</small></li>
+        <li class="open">The RDK lab's old copy of the gateway<small>still in meta-cmf-bananapi-vcpe, with every bug above</small></li>
+      </ul>
+    </div>
+  </section>
+
+  <aside class="banner">
+    <h3>Nothing in the lab, everything beside it</h3>
+    <p>The lab's VM is built and rebuilt as before; its address, its accounts and its
+    reservation live on the host and follow it. Who uses all this, and how, is the other poster:
+    <a href="people.html">who does what</a>.</p>
+  </aside>
+  <p class="foot">Kept in easymesh-remote <code>site/posters/</code>: update it when the remote system changes. Tailnet names are shown as &lt;tailnet&gt;.</p>
+</main>
+</body>
+</html>

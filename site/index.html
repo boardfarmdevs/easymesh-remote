@@ -41,7 +41,7 @@
   three things more: a safe way in, a way to keep two people from driving one mesh, and a way to
   know which lab is which. This page explains what exists for that, how to set a host up, and
   what is proposed so that every lab can be reached.</p>
-  <p class="meta"><span>About a 13-minute read</span><a href="https://github.com/boardfarmdevs/easymesh-remote">The repository</a><a href="https://mesh.vcpe.dev/posters/labs.html">The labs as built</a><a href="https://mesh.vcpe.dev/">The EasyMesh labs</a></p>
+  <p class="meta"><span>About a 13-minute read</span><a href="https://github.com/boardfarmdevs/easymesh-remote">The repository</a><a href="#posters">The posters</a><a href="https://mesh.vcpe.dev/posters/labs.html">The labs as built</a><a href="https://mesh.vcpe.dev/">The EasyMesh labs</a></p>
 </header>
 
 <nav class="toc" aria-label="Contents">
@@ -61,6 +61,7 @@
     <li><a href="#window">One window</a></li>
     <li><a href="#steps">In what order</a></li>
     <li><a href="#repository">The repository</a></li>
+    <li><a href="#posters">The posters</a></li>
   </ol>
 </nav>
 
@@ -563,6 +564,31 @@ proposal</a>.</p>
 (<a href="https://vcpe.dev/meta-cmf-bananapi-vcpe/">meta-cmf-bananapi-vcpe</a>), where it was
 built in September 2026. It was brought here unchanged; the RDK lab still
 carries its copy until it is removed there.</p>
+</section>
+
+<section id="posters">
+<h2>The posters</h2>
+<p>The whole of remote access on two posters, in the labs' poster style: who uses a lab from
+anywhere and what each of them does, and how a lab is reached, from the browser to the lab's
+VM.</p>
+<div class="posters">
+  <a class="poster-card" href="posters/people.html">
+    <picture>
+      <source srcset="posters/img/thumb-people-dark.jpg" media="(prefers-color-scheme: dark)">
+      <img src="posters/img/thumb-people-light.jpg" width="960" height="600" alt="The who-does-what poster: a team member, an admin, the operator, a watcher, a developer's program, the lab network, a partner and everyone else around the lab's page with three interfaces side by side">
+    </picture>
+    <span class="pc-text"><b>A lab from anywhere</b>
+    <span>Who uses a lab remotely, what each of them does and sees, built and to come</span></span>
+  </a>
+  <a class="poster-card" href="posters/flow.html">
+    <picture>
+      <source srcset="posters/img/thumb-flow-dark.jpg" media="(prefers-color-scheme: dark)">
+      <img src="posters/img/thumb-flow-light.jpg" width="960" height="600" alt="The how-it-works poster: the browser, Tailscale, and on the lab host the lab's own device, the gateway, the firewall and the lab's VM, with four numbered paths">
+    </picture>
+    <span class="pc-text"><b>How a lab is reached</b>
+    <span>From the browser to the lab's VM: every path, address, identity and timer</span></span>
+  </a>
+</div>
 <footer class="end">
 <p>Part of the <a href="https://mesh.vcpe.dev/">EasyMesh labs</a>. The room that is reached
 this way is the <a href="https://vcpe.dev/easymesh-optimizer/">optimizer</a>'s; what it shows

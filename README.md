@@ -40,7 +40,7 @@ Browser -> Tailscale HTTPS -> the gateway on the host -> the lab VM's published 
 | [gateway/](gateway) | the gateway: `gateway.py` (the proxy, for HTTP, event streams and WebSockets, and the lab's page), `manage.py` (configure, the lab card, accounts and roles, publish, maintenance, firewall), `remote_state.py` (sessions and the reservation, in SQLite), `install-host.sh`, the systemd units (the gateway, its firewall, the lab's own Tailscale node) and the lab's page (`web/`: the welcome and management window, every interface in one window) |
 | [tests/](tests) | the gateway's tests: sessions, publication, the firewall in disposable network namespaces, the proxy, and a browser test of the lab's page with three accounts |
 | [docs/](docs) | the setup guide, the reference of what each lab publishes, the proposal |
-| [site/](site) | the explainer site |
+| [site/](site) | the explainer site, and its two posters (`site/posters/`): who does what, and how a lab is reached |
 | [pages/](pages) | the site's build; the rest of the Pages workflow is the labs' shared one, in the umbrella |
 
 The gateway and its tests were brought here from the RDK lab
@@ -79,6 +79,6 @@ node tests/remote-access-browser-test.js
 
 ## Documentation
 
-The [site](https://vcpe.dev/easymesh-remote/) explains remote access for a newcomer. The
+The [site](https://vcpe.dev/easymesh-remote/) explains remote access for a newcomer; its two posters show [who does what](https://vcpe.dev/easymesh-remote/posters/people.html) and [how a lab is reached](https://vcpe.dev/easymesh-remote/posters/flow.html). The
 documents are indexed in [docs/README.md](docs/README.md): the setup guide, what each lab
 publishes, and the proposal for remote labs.

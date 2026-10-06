@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A lab from anywhere</title>
+<link rel="icon" href="../icon.svg" type="image/svg+xml">
+<meta name="description" content="Who uses an EasyMesh lab from outside the lab network and what each of them does: a team member, an admin, the operator on the host, the people on the lab network; next a developer's program, later a watcher and a partner. Drawn from rdk-emosa on rev120, 6 October 2026.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://mesh.vcpe.dev/posters/posters.css">
+<script src="https://mesh.vcpe.dev/posters/posters.js" defer></script>
+</head>
+<body>
+<main class="poster">
+  <header class="masthead">
+    <p class="eyebrow">boardfarmdevs · EasyMesh labs · remote access · who does what · 6 October 2026</p>
+    <h1>A lab from anywhere</h1>
+    <p>Who uses a lab from outside the lab network, what each of them does and what they see.
+    Drawn from <b>rdk-emosa</b> on rev120, published privately on its own address since
+    6 October. The team uses it today; a program, a watcher and a partner come next and later.</p>
+    <nav><a href="flow.html">How it works →</a> <a href="../index.html">The explainer</a> <a href="https://mesh.vcpe.dev/posters/labs.html">The labs as built</a> <a href="https://mesh.vcpe.dev/">Home</a></nav>
+  </header>
+
+  <section class="board fourth" aria-label="The people around one lab">
+
+    <article class="card remote a">
+      <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg>A team member</h2>
+      <p class="repo">on the tailnet · an operator account</p>
+      <ul class="rows">
+        <li><b>Opens the lab's address</b><code>https://rdk-emosa.&lt;tailnet&gt;.ts.net/_remote/</code></li>
+        <li><b>Signs in, sees whether the lab is free</b><code>a gateway account today; the Tailscale identity next (Q1)</code></li>
+        <li><b>Reserves it: nobody else drives it now</b><code>one reservation for every interface and API</code></li>
+        <li><b>Works in every interface in one window</b><code>side by side · one large · one at a time</code></li>
+        <li><b>Releases it, or it ends by itself</b><code>10 min without input · 60 min at most</code></li>
+      </ul>
+      <span class="pill">Built · today</span>
+    </article>
+
+    <article class="card remote b">
+      <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>An admin</h2>
+      <p class="repo">an admin account · the lab's page, Manage</p>
+      <ul class="rows">
+        <li><b>Everything a team member does</b><code>reserve · use · release</code></li>
+        <li><b>Sees who is signed in, in how many browsers</b><code>and who holds the lab</code></li>
+        <li><b>Releases the lab at once</b><code>the room still settles for 125 s</code></li>
+        <li><b>Starts and ends maintenance</b><code>ends the reservation, refuses new ones</code></li>
+      </ul>
+      <span class="pill">Built · today</span>
+    </article>
+
+    <article class="card umbrella c">
+      <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/></svg>The operator</h2>
+      <p class="repo">SSH to the host · <a href="https://github.com/boardfarmdevs/easymesh-remote/blob/main/docs/guides/setup.md">the setup guide</a></p>
+      <ul class="rows">
+        <li><b>Installs the gateway, once per host</b><code>sudo bash gateway/install-host.sh</code></li>
+        <li><b>Sets a lab up and adds its people</b><code>configure --vm · add-user NAME --role admin</code></li>
+        <li><b>Gives the lab its own address</b><code>address: one approval in Tailscale</code></li>
+        <li><b>Publishes it, privately</b><code>publish --mode private</code></li>
+        <li><b>Moves it to each rebuilt VM</b><code>retarget --vm rdk-emosa-1005</code></li>
+      </ul>
+      <span class="pill">Built · manage.py</span>
+    </article>
+
+    <article class="card medium d">
+      <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>A watcher</h2>
+      <p class="repo">the observer role · proposal section 6</p>
+      <ul class="rows">
+        <li><b>Follows a room someone else drives</b><code>every interface, read-only</code></li>
+        <li><b>Many at once, beside the one who drives</b><code>a review, a demonstration</code></li>
+        <li><b>Today: sees who holds the lab, and until when</b><code>the lab's page, not its interfaces</code></li>
+      </ul>
+      <span class="pill">Later · step 9</span>
+    </article>
+
+    <figure class="device x">
+      <div class="laptop">
+        <div class="screen"><img src="img/remote-workspace.jpg" width="1600" height="1000" alt="The lab's page over the tailnet: the room with its 3D floor plan, the controller's dashboard and Console NG side by side, reserved by alice"></div>
+        <div class="base"></div>
+      </div>
+      <figcaption>What a team member sees once the lab is theirs: <b>the room</b>, <b>the controller</b>
+      and <b>Console NG</b> of rdk-emosa side by side, over the tailnet, from anywhere.</figcaption>
+    </figure>
+
+    <article class="card optimizer e">
+      <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 8l-4 4 4 4M16 8l4 4-4 4M14 5l-4 14"/></svg>A developer's program</h2>
+      <p class="repo">an optimizer run · a room suite · requirement Q2</p>
+      <ul class="rows">
+        <li><b>Reserves a lab for hours, not minutes</b><code>a key, no browser sign-in</code></li>
+        <li><b>Drives the controller's and the room's APIs</b><code>from a developer's own machine</code></li>
+        <li><b>Releases it when the run ends</b><code>the suites reserve the same way</code></li>
+      </ul>
+      <span class="pill">Next · step 6</span>
+    </article>
+
+    <article class="card rdk f">
+      <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg>The lab network</h2>
+      <p class="repo">trusted · requirement Q3</p>
+      <ul class="rows">
+        <li><b>Uses the lab's ports as before</b><code>192.168.2.120:20110 · 20111 · 20112</code></li>
+        <li><b>Not closed for a private lab</b><code>bookmarks and rev150's room suites keep working</code></li>
+        <li><b>Shares the lab by the same reservation</b><code>local tools take it: step 6</code></li>
+      </ul>
+      <span class="pill">Built · open</span>
+    </article>
+
+    <article class="card builder g">
+      <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>A partner</h2>
+      <p class="repo">outside the tailnet · requirements Q1, Q5</p>
+      <ul class="rows">
+        <li><b>Does what a team member does</b><code>a gateway account of their own</code></li>
+        <li><b>Gets in by a shared lab device</b><code>sharing one device shares one lab</code></li>
+        <li><b>Or by Funnel, with no Tailscale at all</b><code>not until a partner asks</code></li>
+      </ul>
+      <span class="pill">Later</span>
+    </article>
+
+    <article class="card phys h">
+      <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg>Everyone else</h2>
+      <p class="repo">no account, or not holding the lab</p>
+      <ul class="rows">
+        <li><b>Sees the sign-in, nothing behind it</b><code>423 on every interface, API and stream</code></li>
+        <li><b>A second account sees who holds it</b><code>"In use by alice", free within 11:50</code></li>
+        <li><b>Nothing else of the host on the lab's name</b><code>its SSH and web server refused</code></li>
+      </ul>
+      <span class="pill">Kept out</span>
+    </article>
+
+    <article class="card remote wide i">
+      <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>What a reservation means</h2>
+      <p class="repo">the same for every person and, next, every program</p>
+      <ul class="rows">
+        <li><b>One person drives a lab at a time</b><code>a mesh is shared state: one medium, one controller, one set of clients</code></li>
+        <li><b>It covers every interface and API</b><code>in every tab of that browser; a second browser of the same account is turned away</code></li>
+        <li><b>Real input keeps it</b><code>clicks, keys, scrolling, touch in any view; watching and an unattended Play do not count</code></li>
+        <li><b>It has a hard limit</b><code>60 minutes; "Keep active" covers watching, never the limit</code></li>
+        <li><b>The room's own operator is respected</b><code>no reservation while someone holds the room's lease locally</code></li>
+        <li><b>Then the lab settles for the next person</b><code>125 s: longer than the room's longest lease</code></li>
+      </ul>
+      <span class="pill">The rules</span>
+    </article>
+
+    <article class="card umbrella below j">
+      <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 12h10M4 18h7"/></svg>Built, next, later</h2>
+      <p class="repo">the proposal's steps, 6 October</p>
+      <ul class="rows">
+        <li><b>Built</b><code>a lab's own address · the lab's page · admins · retarget · the open lab network</code></li>
+        <li><b>Next</b><code>the team's Tailscale sign-in · programs and suites with keys</code></li>
+        <li><b>Later</b><code>the other labs · the directory · watchers · the queue · partners</code></li>
+      </ul>
+      <span class="pill">Status</span>
+    </article>
+  </section>
+
+  <section class="journeys" aria-label="What each of them does, step by step">
+    <article class="journey remote">
+      <h3><span class="num">1</span>A team member's hour with the lab</h3>
+      <p>From a laptop anywhere, on the tailnet. Nothing to install but Tailscale.</p>
+      <ol class="steps">
+        <li>Opens <code>https://rdk-emosa.&lt;tailnet&gt;.ts.net/_remote/</code>: the lab's card, what it is, and the rules.</li>
+        <li>Signs in. The page says <b>Free</b>, or who holds the lab and when it is free at the latest.</li>
+        <li>Presses <b>Reserve and open the lab</b>. The gateway checks that nobody holds the room locally, then the lab is theirs.</li>
+        <li>Works: the room, the controller and Console NG side by side; drags a divider, maximizes the room, sends a colleague the layout's link.</li>
+        <li>Steps away for coffee: the idle timer counts down from 10 minutes; any click in any view renews it.</li>
+        <li>Presses <b>Release lab</b>. Every view closes; the next person can reserve 125 s later.</li>
+      </ol>
+    </article>
+    <article class="journey builder">
+      <h3><span class="num">2</span>An admin steps in</h3>
+      <p>Someone left a reservation running, or the lab needs local work.</p>
+      <ol class="steps">
+        <li>Opens <b>Manage</b> on the lab's page: who is signed in, in how many browsers, who holds the lab and for how long.</li>
+        <li><b>Release now</b>: the holder's views close at once; the lab settles, then it is free.</li>
+        <li><b>Start maintenance</b> before a local suite or work on the VM: the reservation ends and nobody can take a new one.</li>
+        <li><b>End maintenance</b> when done; the page tells everyone the lab is free again.</li>
+      </ol>
+    </article>
+    <article class="journey umbrella">
+      <h3><span class="num">3</span>The operator, from install to rebuild</h3>
+      <p>On the lab host over SSH, with <code>manage.py</code> (<code>/opt/easymesh-remote</code>).</p>
+      <ol class="steps">
+        <li><code>install-host.sh</code>, once per host: the packages, a service account, the units.</li>
+        <li><code>--lab rdk-emosa configure --vm rdk-emosa-1002</code>: the lab named after its configuration, its VM's published ports read.</li>
+        <li><code>add-user rob --role admin</code>, <code>add-user alice</code>: a password each, typed, never on a command line.</li>
+        <li><code>address</code>: the lab's own Tailscale device; one link to approve, once.</li>
+        <li><code>publish --mode private</code>: the lab's three addresses, each checked to reach the gateway.</li>
+        <li>After every rebuild, once the new VM is accepted: <code>retarget --vm rdk-emosa-1005</code>. The address, the accounts and the state stay.</li>
+      </ol>
+    </article>
+    <article class="journey optimizer">
+      <h3><span class="num">4</span>A program, next</h3>
+      <p>Requirement Q2: an optimizer developed on someone's own machine, run against a lab.</p>
+      <ol class="steps">
+        <li>The developer asks an admin for a key for one lab.</li>
+        <li>The program reserves the lab with it, for the length of the run: hours, not the 60 minutes a person gets.</li>
+        <li>It reads the controller's topology and the room's state, and steers clients, through the same addresses.</li>
+        <li>It releases the lab at the end; the room suites on the host reserve it the same way, in place of maintenance.</li>
+      </ol>
+    </article>
+  </section>
+
+  <section class="stage-shots" aria-label="What they see">
+    <figure><img src="img/remote-welcome.jpg" width="1600" height="1000" alt="The lab's page signed out: RDK lab + EMOSA, what it is, the sign-in form, its three interfaces and the rules" loading="lazy"><figcaption><b>1 · The welcome</b> · signed out: what the lab is, its interfaces, the rules, the sign-in</figcaption></figure>
+    <figure><img src="img/remote-free.jpg" width="1600" height="1000" alt="The lab's page for alice, signed in: the lab's VM, host and build date, Free, and the button Reserve and open the lab" loading="lazy"><figcaption><b>2 · Free</b> · signed in: the VM, the host, the build date, and the reserve button</figcaption></figure>
+    <figure><img src="img/remote-one-large.jpg" width="1600" height="1000" alt="The workspace in its one large layout: the room large on the left, the controller and Console NG stacked on the right" loading="lazy"><figcaption><b>3 · One large</b> · the room beside the controller and Console NG; the idle and limit timers in the bar</figcaption></figure>
+    <figure><img src="img/remote-tabs.jpg" width="1600" height="1000" alt="The workspace one at a time: the room alone, with tabs for the room, the controller and Console NG" loading="lazy"><figcaption><b>4 · One at a time</b> · the room alone, the others a tab away and still live</figcaption></figure>
+    <figure><img src="img/remote-in-use.jpg" width="1600" height="1000" alt="The lab's page in dark mode for bob while alice holds the lab: In use by alice, free within 12:00 at the latest, the reserve button disabled" loading="lazy"><figcaption><b>5 · In use</b> · bob, meanwhile: who holds the lab and when it is free at the latest</figcaption></figure>
+    <figure><img src="img/remote-admin.jpg" width="1600" height="1000" alt="The Manage panel: the reservation with its timers and Release now, maintenance with its button, who is signed in, and the commands for accounts" loading="lazy"><figcaption><b>6 · Manage</b> · an admin's panel (a test run against rdk-emosa-1002's interfaces)</figcaption></figure>
+  </section>
+
+  <section class="stage-panels" aria-label="The requirements and what is open">
+    <div class="panel">
+      <h3>The requirements · confirmed 6 October</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th></th><th>Question</th><th>Answer</th></tr></thead>
+          <tbody>
+            <tr><td style="white-space:nowrap"><b>Q1</b></td><td>Who uses a lab remotely?</td><td>the team now, on the tailnet; named partners later</td></tr>
+            <tr><td style="white-space:nowrap"><b>Q2</b></td><td>What do they do?</td><td>click through the interfaces now; run their own code against a lab soon</td></tr>
+            <tr><td style="white-space:nowrap"><b>Q3</b></td><td>Is the lab network trusted?</td><td>yes: closed only for a public lab</td></tr>
+            <tr><td style="white-space:nowrap"><b>Q4</b></td><td>After a rebuild, which VM is the lab?</td><td>the newest accepted one, by <code>retarget</code></td></tr>
+            <tr><td style="white-space:nowrap"><b>Q5</b></td><td>Public access?</td><td>not until a partner asks</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Open</h3>
+      <ul class="timeline">
+        <li class="open">The team still signs in with a gateway password<small>step 5: the Tailscale identity the tailnet already checked</small></li>
+        <li class="open">Programs and suites cannot reserve a lab<small>step 6: keys and reservations of hours; until then a suite runs under maintenance</small></li>
+        <li class="open">rdk-emosa-1005 is not served yet<small>built this morning beside 1002; retarget once it is accepted</small></li>
+        <li class="open">Only the RDK labs<small>step 7: the prplMesh and OpenSync labs name their interfaces differently</small></li>
+      </ul>
+    </div>
+  </section>
+
+  <aside class="banner">
+    <h3>One lab, one person driving, from anywhere</h3>
+    <p>How it works underneath, from the browser to the lab's VM, is the other poster:
+    <a href="flow.html">how a lab is reached</a>. Everything here is in
+    <a href="https://github.com/boardfarmdevs/easymesh-remote">easymesh-remote</a>.</p>
+  </aside>
+  <p class="foot">Kept in easymesh-remote <code>site/posters/</code>: update it when the remote system changes. Tailnet names are shown as &lt;tailnet&gt;.</p>
+</main>
+</body>
+</html>
