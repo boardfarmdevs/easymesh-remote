@@ -23,7 +23,10 @@ fi
 if ! id easymesh-remote >/dev/null 2>&1; then
     useradd --system --user-group --home-dir /nonexistent --shell /usr/sbin/nologin easymesh-remote
 fi
-install -d -m 0755 /opt/easymesh-remote /opt/easymesh-remote/web
+install -d -m 0755 /opt/easymesh-remote
+# The page's files are replaced whole: none of a previous version's is left behind.
+rm -rf /opt/easymesh-remote/web
+install -d -m 0755 /opt/easymesh-remote/web
 install -d -m 0750 -o root -g easymesh-remote /etc/easymesh-remote
 install -d -m 0755 /var/lib/easymesh-remote
 install -m 0644 "$root/gateway.py" "$root/remote_state.py" /opt/easymesh-remote/
