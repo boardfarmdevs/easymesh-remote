@@ -148,3 +148,7 @@ cannot be reserved as the code stands.
   the tailnet: the three interfaces side by side in the lab's page with valid certificates;
   on the lab's name only 443, 8443 and 10000 answer, while the host's SSH, web server and
   printing service (listening on its loopback) are refused.
+- rev120, later on 6 October: `rdk-emosa-1002` stopped; the lab moved to its rebuild with
+  `retarget --vm rdk-emosa-1005` (host ports 22010 to 22012, the VM at `10.77.171.250`), its
+  address, accounts and state unchanged. Checked over the tailnet: the three interfaces of
+  1005 side by side, the lab card showing the new VM and its build date.

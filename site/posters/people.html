@@ -97,7 +97,7 @@
       <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg>The lab network</h2>
       <p class="repo">trusted · requirement Q3</p>
       <ul class="rows">
-        <li><b>Uses the lab's ports as before</b><code>192.168.2.120:20110 · 20111 · 20112</code></li>
+        <li><b>Uses the lab's ports as before</b><code>192.168.2.120:22010 · 22011 · 22012</code></li>
         <li><b>Not closed for a private lab</b><code>bookmarks and rev150's room suites keep working</code></li>
         <li><b>Shares the lab by the same reservation</b><code>local tools take it: step 6</code></li>
       </ul>
@@ -205,7 +205,7 @@
     <figure><img src="img/remote-one-large.jpg" width="1600" height="1000" alt="The workspace in its one large layout: the room large on the left, the controller and Console NG stacked on the right" loading="lazy"><figcaption><b>3 · One large</b> · the room beside the controller and Console NG; the idle and limit timers in the bar</figcaption></figure>
     <figure><img src="img/remote-tabs.jpg" width="1600" height="1000" alt="The workspace one at a time: the room alone, with tabs for the room, the controller and Console NG" loading="lazy"><figcaption><b>4 · One at a time</b> · the room alone, the others a tab away and still live</figcaption></figure>
     <figure><img src="img/remote-in-use.jpg" width="1600" height="1000" alt="The lab's page in dark mode for bob while alice holds the lab: In use by alice, free within 12:00 at the latest, the reserve button disabled" loading="lazy"><figcaption><b>5 · In use</b> · bob, meanwhile: who holds the lab and when it is free at the latest</figcaption></figure>
-    <figure><img src="img/remote-admin.jpg" width="1600" height="1000" alt="The Manage panel: the reservation with its timers and Release now, maintenance with its button, who is signed in, and the commands for accounts" loading="lazy"><figcaption><b>6 · Manage</b> · an admin's panel (a test run against rdk-emosa-1002's interfaces)</figcaption></figure>
+    <figure><img src="img/remote-admin.jpg" width="1600" height="1000" alt="The Manage panel: the reservation with its timers and Release now, maintenance with its button, who is signed in, and the commands for accounts" loading="lazy"><figcaption><b>6 · Manage</b> · an admin's panel (a test run against rdk-emosa-1005's interfaces)</figcaption></figure>
   </section>
 
   <section class="stage-panels" aria-label="The requirements and what is open">
@@ -229,7 +229,7 @@
       <ul class="timeline">
         <li class="open">The team still signs in with a gateway password<small>step 5: the Tailscale identity the tailnet already checked</small></li>
         <li class="open">Programs and suites cannot reserve a lab<small>step 6: keys and reservations of hours; until then a suite runs under maintenance</small></li>
-        <li class="open">rdk-emosa-1005 is not served yet<small>built this morning beside 1002; retarget once it is accepted</small></li>
+        <li class="open">A rebuild still needs an operator<small>rdk-emosa moved to 1005 by hand (retarget); the lab's build should run it</small></li>
         <li class="open">Only the RDK labs<small>step 7: the prplMesh and OpenSync labs name their interfaces differently</small></li>
       </ul>
     </div>
