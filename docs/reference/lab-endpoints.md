@@ -143,4 +143,8 @@ cannot be reserved as the code stands.
 - rev120, 6 October 2026: the gateway installed and published privately for `rdk-emosa`
   (`rdk-emosa-1002`'s three proxies as in section 2, host ports 20110 to 20112, now closed
   to the LAN by its firewall). Apache on rev120 listens on `*:443`, which holds port 443
-  of the host's own Tailscale address: the lab is moved to a Tailscale name of its own.
+  of the host's own Tailscale address, so the lab was moved to a Tailscale name of its own
+  the same day, `rdk-emosa.<tailnet>.ts.net`, and published privately there. Checked over
+  the tailnet: the three interfaces side by side in the lab's page with valid certificates;
+  on the lab's name only 443, 8443 and 10000 answer, while the host's SSH, web server and
+  printing service (listening on its loopback) are refused.
