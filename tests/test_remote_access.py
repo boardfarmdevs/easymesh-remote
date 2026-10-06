@@ -722,6 +722,22 @@ class GatewayTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(ClientPayloadError):
             await asyncio.wait_for(response.read(), 2)
 
+    async def test_session_ending_while_waiting_for_the_gateway_is_423(self):
+        # aiohttp has no HTTPLocked: this answered 500, and a stream's end logged a traceback (rev120, 6 October).
+        self.sessions.acquire(self.alice)
+        for _ in range(64):
+            await self.gateway.requests.acquire()
+        try:
+            request = asyncio.create_task(self.clients["room"].get("/api/test", headers=self.headers(service="room")))
+            await asyncio.sleep(.1)
+            self.sessions.release(self.alice)
+        finally:
+            for _ in range(64):
+                self.gateway.requests.release()
+        response = await asyncio.wait_for(request, 2)
+        self.assertEqual(response.status, 423)
+        self.assertEqual(self.upstream_requests, [])
+
     async def test_websocket_is_bidirectional_and_closed_at_expiry(self):
         self.sessions.acquire(self.alice)
         socket = await self.clients["console"].ws_connect("/socket", headers=self.headers(service="console"))

@@ -33,6 +33,11 @@ VIEWS = {
 ROLES = {"operator", "admin"}
 
 
+class HTTPLocked(web.HTTPClientError):
+    """423: aiohttp has no exception for it."""
+    status_code = 423
+
+
 def filtered_headers(headers):
     excluded = HOP_HEADERS | {entry.strip().lower() for entry in headers.get("Connection", "").split(",")}
     return CIMultiDict((name, value) for name, value in headers.items() if name.lower() not in excluded)
@@ -107,7 +112,7 @@ class Gateway:
                                          status=423, headers={"Cache-Control": "no-store"})
             async with self.requests:
                 if not self.sessions.status(token)["mine"]:
-                    raise web.HTTPLocked(text="Session expired while waiting for the gateway.")
+                    raise HTTPLocked(text="Session expired while waiting for the gateway.")
                 return await self.forward_with_expiry(request, service, token)
         except web.HTTPException:
             raise
@@ -262,7 +267,7 @@ class Gateway:
                 return await proxy
             if request.transport:
                 request.transport.close()
-            raise web.HTTPLocked(text="The exclusive session ended.")
+            raise HTTPLocked(text="The exclusive session ended.")
         finally:
             for task in (proxy, watcher):
                 if not task.done():
