@@ -114,8 +114,9 @@ files; the supplied package installer deliberately refuses unsupported hosts.
 trusted (the proposal's requirement Q3): LAN bookmarks and local suites keep
 working, and whoever is on the LAN reaches the lab without a reservation, so run
 local work under maintenance. `--close-lan` closes the lab's ports to the LAN all
-the same. **A public publication always closes them** (section "Direct-port
-protection").
+the same. **A public publication closes them** (section "Direct-port
+protection"), unless `--keep-lan-open` keeps them open: for a public lab on which
+local work goes on, the trusted LAN keeping the access it had.
 
 ```sh
 sudo "$REMOTE" --lab "$LAB" publish --mode private
@@ -253,7 +254,7 @@ not an attempt to isolate multiple independent experiments in one running mesh.
 ## Direct-port protection and local testing
 
 A public `publish` (or `--close-lan`) first enables `easymesh-remote-firewall@LAB.service`; a
-private one disables it. Its dedicated
+private one, or a public one with `--keep-lan-open`, disables it. Its dedicated
 `inet em_remote_*` nftables table drops incoming traffic to the selected host
 forward ports **before LXD DNAT**, plus direct access to the corresponding VM
 addresses/ports. It does not flush existing firewall rules, change LXD proxy

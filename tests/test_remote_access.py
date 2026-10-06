@@ -168,7 +168,7 @@ class SetupTests(unittest.TestCase):
                 result["AllowFunnel"][endpoint] = True
         return result
 
-    def published(self, mode, close_lan=False):
+    def published(self, mode, close_lan=False, keep_lan_open=False):
         with tempfile.TemporaryDirectory() as directory:
             config = configuration(directory)
             Path(config["users_file"]).write_text('{"alice": "test-only-hash"}')
@@ -179,7 +179,7 @@ class SetupTests(unittest.TestCase):
                     patch.object(remote_manage, "firewall", side_effect=lambda config, enabled: recorded.append(("firewall", enabled))), \
                     patch.object(remote_manage, "check_gateway", side_effect=lambda *arguments: recorded.append(("ready",))), \
                     patch.object(remote_manage, "check_public", side_effect=lambda *arguments: recorded.append(("public",))):
-                remote_manage.publish(config, mode, confirmed=True, close_lan=close_lan)
+                remote_manage.publish(config, mode, confirmed=True, close_lan=close_lan, keep_lan_open=keep_lan_open)
             return recorded
 
     def test_private_publish_leaves_the_trusted_lan_open(self):
@@ -202,6 +202,16 @@ class SetupTests(unittest.TestCase):
                 self.assertNotIn(("firewall", False), recorded)
                 self.assertLess(recorded.index(("firewall", True)), recorded.index(("ready",)))
                 self.assertLess(recorded.index(("ready",)), recorded.index(expose[0]))
+
+    def test_public_publish_can_keep_the_trusted_lan_open(self):
+        recorded = self.published("public", keep_lan_open=True)
+        expose = [entry for entry in recorded if entry[0] == "tailscale"]
+        self.assertTrue(expose and all(entry[1] == "funnel" for entry in expose))
+        self.assertIn(("firewall", False), recorded)
+        self.assertNotIn(("firewall", True), recorded)
+        for mode, close_lan in (("private", False), ("public", True)):
+            with self.subTest(mode=mode, close_lan=close_lan), self.assertRaisesRegex(ValueError, "keep-lan-open"):
+                self.published(mode, close_lan, keep_lan_open=True)
 
     def test_retarget_moves_the_lab_to_a_rebuilt_vm(self):
         with tempfile.TemporaryDirectory() as directory:

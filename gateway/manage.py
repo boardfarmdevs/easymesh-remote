@@ -276,9 +276,11 @@ def check_public(config, wait=60):
             time.sleep(2)
 
 
-def publish(config, mode, confirmed=False, close_lan=False):
+def publish(config, mode, confirmed=False, close_lan=False, keep_lan_open=False):
     if mode == "public" and not confirmed:
         raise ValueError("Public access requires --confirm-public. Login still remains mandatory.")
+    if keep_lan_open and (mode != "public" or close_lan):
+        raise ValueError("--keep-lan-open is for a public lab, and not with --close-lan.")
     if not json.loads(Path(config["users_file"]).read_text()):
         raise ValueError("Add at least one user before publication.")
     discovered = discover_services(config["vm"], config["services"]["topology"]["local_port"])
@@ -288,7 +290,7 @@ def publish(config, mode, confirmed=False, close_lan=False):
     check_publication(config, current)
     # The lab network is trusted: the lab's ports close to it only for a public lab, or on request.
     firewall_unit = f"easymesh-remote-firewall@{config['lab']}.service"
-    if mode == "public" or close_lan:
+    if (mode == "public" and not keep_lan_open) or close_lan:
         command("systemctl", "enable", "--now", firewall_unit)
         firewall(config, True)
     else:
@@ -462,6 +464,8 @@ def main():
     publisher.add_argument("--mode", choices=("private", "public"), default="private")
     publisher.add_argument("--confirm-public", action="store_true")
     publisher.add_argument("--close-lan", action="store_true", help="close the lab's ports to the LAN, private too")
+    publisher.add_argument("--keep-lan-open", action="store_true",
+                           help="a public lab whose ports stay open on the trusted LAN (local work on it goes on)")
     moving = commands.add_parser("retarget", help="serve a rebuilt VM of the lab; address, accounts and state stay")
     moving.add_argument("--vm", required=True)
     for operation in ("status", "release", "unpublish", "firewall-on", "firewall-off", "maintenance-on", "maintenance-off"):
@@ -513,7 +517,7 @@ def main():
         else:
             own_address(config, args.name or args.lab, args.auth_key_file)
     elif args.operation == "publish":
-        publish(config, args.mode, args.confirm_public, args.close_lan)
+        publish(config, args.mode, args.confirm_public, args.close_lan, args.keep_lan_open)
     elif args.operation == "retarget":
         retarget(config, args.vm, sessions)
     elif args.operation == "unpublish":
