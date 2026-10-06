@@ -64,6 +64,7 @@ sudo /opt/easymesh-remote/manage.py --lab "$LAB" configure --vm "$VM"
 sudo /opt/easymesh-remote/manage.py --lab "$LAB" add-user alice --role admin
 sudo /opt/easymesh-remote/manage.py --lab "$LAB" address    # the lab's own Tailscale name: a link to open
 sudo /opt/easymesh-remote/manage.py --lab "$LAB" publish --mode private
+sudo /opt/easymesh-remote/manage.py --lab "$LAB" retarget --vm NEW   # after each rebuild of the lab
 ```
 
 To run the tests, on any machine:

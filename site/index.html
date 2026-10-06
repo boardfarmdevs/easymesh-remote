@@ -291,11 +291,13 @@ to run two experiments in one mesh.</p>
 
 <section id="doors">
 <h2>Closing the side doors</h2>
-<p>A login in front of a lab is worth little while the lab's ports are still open next to it.
-Publishing a lab therefore also switches on a firewall that drops traffic from the network to
-that lab's three ports, on the host and on the VM's own addresses. It touches nothing else:
-SSH, other labs and the lab's radio traffic are unaffected. Ordinary bookmarks to those ports
-on the lab network stop working, by design; the gateway is the way in.</p>
+<p>A login in front of a lab is worth little while the lab's ports are still open next to it,
+to whoever can reach them. The lab network itself is trusted: a lab published privately keeps
+its ports open there, so bookmarks and local test suites keep working, and the people on it
+share the lab by the same reservation. A lab published <em>publicly</em> switches on a
+firewall that drops traffic from the network to that lab's three ports, on the host and on the
+VM's own addresses (and a private one can ask for it too). It touches nothing else: SSH, other
+labs and the lab's radio traffic are unaffected.</p>
 <p>The people who administer the host can still go around it, and for them there is
 <strong>maintenance mode</strong>. It ends any remote reservation, closes its streams and
 blocks new ones until it is switched off, so a test suite can run on the host without a remote
@@ -331,6 +333,7 @@ must see "in use" and reach nothing.</p>
 <tr><td>end someone's reservation</td><td><code>release</code>, or <b>Manage</b> on the lab's page as an admin</td></tr>
 <tr><td>make someone an admin</td><td><code>role NAME admin</code></td></tr>
 <tr><td>remove a person</td><td><code>remove-user NAME</code></td></tr>
+<tr><td>move the lab to its rebuilt VM</td><td><code>retarget --vm NEW</code>: the address, the accounts and the state stay</td></tr>
 <tr><td>stop sharing</td><td><code>unpublish</code>; the firewall stays until it is switched off separately</td></tr>
 </tbody></table></div>
 <p>The <a href="https://github.com/boardfarmdevs/easymesh-remote/blob/main/docs/guides/setup.md">setup
@@ -522,17 +525,19 @@ video delay and no access for a program.</p>
 
 <section id="steps">
 <h2>In what order</h2>
-<p>Each step leaves the gateway working for the RDK lab exactly as it does today.</p>
+<p>In the order of the requirements confirmed on 6 October: the team first, then programs, then the other labs. Each step leaves the gateway working for the labs it already serves.</p>
 <div class="table-wrap"><table>
 <thead><tr><th></th><th>Adds</th><th>Done when</th></tr></thead>
 <tbody>
-<tr><td class="num">1</td><td>this repository: the gateway and its tests, the guide, the reference</td><td>the tests pass here</td></tr>
-<tr><td class="num">2</td><td>a lab's interfaces read from its VM, whatever they are called</td><td>the prplMesh and OpenSync labs are reachable</td></tr>
-<tr><td class="num">3</td><td>one address per lab</td><td>two labs on one host are published at once: built, 6 October</td></tr>
-<tr><td class="num">4</td><td>the lab card and the directory</td><td>a newcomer finds a free lab without asking</td></tr>
-<tr><td class="num">5</td><td>observers</td><td>a second person watches a room being driven</td></tr>
-<tr><td class="num">6</td><td>the workspace</td><td>a lab's interfaces sit in one window: done, 6 October</td></tr>
-<tr><td class="num">7</td><td>the queue, the suites' reservation, starting a lab on demand</td><td>two people alternate without talking to each other</td></tr>
+<tr><td class="num">1</td><td>this repository: the gateway and its tests, the guide, the reference</td><td>done, but for removing the RDK lab's old copy</td></tr>
+<tr><td class="num">2</td><td>one address per lab</td><td>built, 6 October</td></tr>
+<tr><td class="num">3</td><td>the lab's page: the welcome, one window, admins</td><td>built, 6 October</td></tr>
+<tr><td class="num">4</td><td>rebuilds (<code>retarget</code>) and the trusted lab network</td><td>built, 6 October; next, the builds run it themselves</td></tr>
+<tr><td class="num">5</td><td>the team signs in with its Tailscale identity</td><td>no second password for a team member</td></tr>
+<tr><td class="num">6</td><td>programs: keys, reservations of hours, the suites' reservation</td><td>an optimizer run holds a lab for an afternoon</td></tr>
+<tr><td class="num">7</td><td>a lab's interfaces read from its VM, whatever they are called</td><td>the prplMesh and OpenSync labs are reachable</td></tr>
+<tr><td class="num">8</td><td>the directory across labs</td><td>a newcomer finds a free lab without asking</td></tr>
+<tr><td class="num">9</td><td>observers, the queue, starting a lab on demand</td><td>two people alternate without talking to each other</td></tr>
 </tbody></table></div>
 <p>Beyond this lies a different thing: an optimizer that runs on a developer's own machine
 and drives a lab through an API. That is the umbrella's proposal

@@ -1,7 +1,6 @@
 [Unit]
 Description=Exclusive remote access to EasyMesh lab %i
-After=network-online.target tailscaled.service easymesh-remote-firewall@%i.service
-Requires=easymesh-remote-firewall@%i.service
+After=network-online.target tailscaled.service easymesh-remote-tailscale@%i.service easymesh-remote-firewall@%i.service
 Wants=network-online.target
 
 [Service]

@@ -168,24 +168,71 @@ class SetupTests(unittest.TestCase):
                 result["AllowFunnel"][endpoint] = True
         return result
 
-    def test_private_publish_protects_backends_before_exposure(self):
+    def published(self, mode, close_lan=False):
         with tempfile.TemporaryDirectory() as directory:
             config = configuration(directory)
             Path(config["users_file"]).write_text('{"alice": "test-only-hash"}')
             recorded = []
             with patch.object(remote_manage, "discover_services", return_value=config["services"]), \
-                    patch.object(remote_manage, "read_command", side_effect=["{}", json.dumps(self.publication(config))]), \
+                    patch.object(remote_manage, "read_command", side_effect=["{}", json.dumps(self.publication(config, mode == "public"))]), \
                     patch.object(remote_manage, "command", side_effect=lambda *arguments: recorded.append(arguments)), \
-                    patch.object(remote_manage, "firewall", side_effect=lambda *arguments: recorded.append(("firewall", True))), \
+                    patch.object(remote_manage, "firewall", side_effect=lambda config, enabled: recorded.append(("firewall", enabled))), \
                     patch.object(remote_manage, "check_gateway", side_effect=lambda *arguments: recorded.append(("ready",))), \
                     patch.object(remote_manage, "check_public", side_effect=lambda *arguments: recorded.append(("public",))):
-                remote_manage.publish(config, "private")
-            expose = [entry for entry in recorded if entry[0] == "tailscale"]
-            self.assertEqual(len(expose), 3)
-            self.assertTrue(all(entry[1] == "serve" and "--bg" in entry for entry in expose))
-            self.assertLess(recorded.index(("firewall", True)), recorded.index(("ready",)))
-            self.assertLess(recorded.index(("ready",)), recorded.index(expose[0]))
-            self.assertEqual(recorded[-1], ("public",))
+                remote_manage.publish(config, mode, confirmed=True, close_lan=close_lan)
+            return recorded
+
+    def test_private_publish_leaves_the_trusted_lan_open(self):
+        recorded = self.published("private")
+        expose = [entry for entry in recorded if entry[0] == "tailscale"]
+        self.assertEqual(len(expose), 3)
+        self.assertTrue(all(entry[1] == "serve" and "--bg" in entry for entry in expose))
+        self.assertIn(("firewall", False), recorded)
+        self.assertNotIn(("firewall", True), recorded)
+        self.assertIn(("systemctl", "disable", "--now", "easymesh-remote-firewall@test-lab.service"), recorded)
+        self.assertLess(recorded.index(("ready",)), recorded.index(expose[0]))
+        self.assertEqual(recorded[-1], ("public",))
+
+    def test_public_publish_closes_the_lan_before_exposure(self):
+        for mode, close_lan in (("public", False), ("private", True)):
+            with self.subTest(mode=mode, close_lan=close_lan):
+                recorded = self.published(mode, close_lan)
+                expose = [entry for entry in recorded if entry[0] == "tailscale"]
+                self.assertTrue(all(entry[1] == ("funnel" if mode == "public" else "serve") for entry in expose))
+                self.assertNotIn(("firewall", False), recorded)
+                self.assertLess(recorded.index(("firewall", True)), recorded.index(("ready",)))
+                self.assertLess(recorded.index(("ready",)), recorded.index(expose[0]))
+
+    def test_retarget_moves_the_lab_to_a_rebuilt_vm(self):
+        with tempfile.TemporaryDirectory() as directory:
+            config = configuration(directory)
+            config["card"] = {"title": "RDK lab + EMOSA", "summary": "Pods.", "vm": "test-lab", "built": "2026-10-02"}
+            sessions = Sessions(Path(directory) / "state.db", 30, 90, 125, lambda: 1000.0)
+            alice = sessions.login("alice")
+            sessions.acquire(alice)
+            rebuilt = copy.deepcopy(config["services"])
+            for offset, settings in enumerate(rebuilt.values()):
+                settings.update(upstream=f"http://192.168.1.2:{22010 + offset}", host_port=22010 + offset,
+                                guest_address="10.0.0.3", guest_addresses=["10.0.0.3"])
+            saved, calls = [], []
+            with patch.object(remote_manage, "discover_services", return_value=rebuilt) as discover, \
+                    patch.object(remote_manage, "read_command", return_value=json.dumps({"created_at": "2026-10-06T11:31:00Z"})), \
+                    patch.object(remote_manage, "save_json", side_effect=lambda path, value, owner: saved.append(copy.deepcopy(value))), \
+                    patch.object(remote_manage.pwd, "getpwnam"), \
+                    patch.object(remote_manage.subprocess, "run", return_value=subprocess.CompletedProcess([], 1)), \
+                    patch.object(remote_manage, "firewall") as firewall, \
+                    patch.object(remote_manage, "command", side_effect=lambda *arguments: calls.append(arguments)):
+                remote_manage.retarget(config, "test-lab-1006", sessions)
+            discover.assert_called_once_with("test-lab-1006", 41000)
+            self.assertEqual(saved[-1]["vm"], "test-lab-1006")
+            self.assertEqual(saved[-1]["services"]["room"]["upstream"], "http://192.168.1.2:22012")
+            self.assertEqual((saved[-1]["card"]["title"], saved[-1]["card"]["built"]), ("RDK lab + EMOSA", "2026-10-06"))
+            firewall.assert_not_called()  # the LAN was open: it stays open
+            self.assertEqual(calls, [("systemctl", "try-restart", "easymesh-remote@test-lab.service")])
+            status = sessions.status(alice)
+            self.assertFalse(status["mine"])
+            self.assertFalse(status["maintenance"])
+            self.assertEqual(status["handoff_remaining"], 125)
 
     def test_publication_rolled_back_when_a_public_url_reaches_something_else(self):
         # rev120: Apache on *:443 kept Serve from the Tailscale address's port 443.

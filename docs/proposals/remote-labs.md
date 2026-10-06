@@ -3,10 +3,10 @@
 [Documents](../README.md)
 
 **Status:** Proposal, partly built. What exists is the gateway ([setup](../guides/setup.md))
-for the RDK lab, published privately for `rdk-emosa` on rev120 since 6 October, the
-lab's page of section 7 (step 6, built 6 October, with the card of section 5 shown on it)
-and a lab's own address of section 4 (step 3, built 6 October). The rest of sections 4 to
-9 is not implemented. **Prepared:** 2 October 2026.
+for the RDK lab, published privately for `rdk-emosa` on rev120 since 6 October; the lab's
+page of section 7, a lab's own address of section 4, and moving a lab to its rebuilt VM
+(steps 2 to 4 of section 8, built 6 October). The requirements were confirmed on
+6 October (section 1); the rest is not implemented. **Prepared:** 2 October 2026.
 
 ## 1. The goal
 
@@ -25,6 +25,27 @@ cannot be moved.
 **The rule: build on what the labs already do.** The labs publish their interfaces the
 same way, and one lab has a working gateway. No step here replaces either.
 
+### Requirements (confirmed 6 October)
+
+| # | Question | Answer | What it means |
+| --- | --- | --- | --- |
+| Q1 | Who uses a lab remotely? | the team now, all on the tailnet; named partners later | the team signs in with its Tailscale identity, no second password; the gateway's own accounts stay for people outside the tailnet |
+| Q2 | What do they do? | click through the interfaces now; run their own code against a lab soon (optimizer development) | programs get keys and reservations of hours; this comes before the directory across labs |
+| Q3 | Is the lab network trusted? | yes | a lab's ports close to the LAN only when it is public (or on request); local tools and suites take the reservation like everyone else |
+| Q4 | After a rebuild, which VM is the lab? | the configuration's newest accepted VM | the gateway moves to it with one command (`retarget`), ideally run by the lab's build; the lab keeps its address, accounts and state |
+| Q5 | Public access? | not until a partner asks | Funnel stays supported and untested |
+
+### Who does what
+
+| Who | Does | Through | Today |
+| --- | --- | --- | --- |
+| A team member | opens the lab's address, sees whether it is free, reserves it, works in every interface in one window, releases it | the lab's page | built; signs in with a gateway account until Q1's Tailscale sign-in |
+| An admin | the same, and sees who is signed in, releases the lab, switches maintenance | the lab's page, **Manage** | built |
+| An operator on the host | installs the gateway, gives a lab its address, adds people, publishes, moves the lab to a rebuilt VM, runs local work under maintenance | `manage.py` over SSH | built (`retarget` 6 October) |
+| A developer's program | reserves a lab for hours and drives its APIs | a key | Q2: next |
+| A watcher | follows a room someone else drives | the lab's page, read-only | observer role: later |
+| A partner | the same as a team member, from outside the tailnet | a shared lab device, or Funnel | Q1, Q5: later |
+
 ## 2. What exists
 
 | Piece | Where | What it gives |
@@ -40,6 +61,7 @@ same way, and one lab has a working gateway. No step here replaces either.
 | --- | --- |
 | Other labs | the gateway requires the RDK lab's three device names and a room |
 | More than one lab per host | built (6 October): a lab's own name (section 4); two labs at once not shown yet |
+| Rebuilds | built (6 October): `retarget` moves a lab to its rebuilt VM; the builds do not run it yet |
 | Knowing what exists | the labs poster, updated by hand |
 | Watching without driving | every account is an operator; a second person sees only "in use" |
 | Waiting | no queue; the next person tries again |
@@ -212,17 +234,20 @@ reservation, and every interface of the lab in one window during it.
 
 ## 8. Steps
 
-Each step leaves the gateway working for the RDK lab as it does today.
+Ordered by the requirements of section 1 (renumbered 6 October). Each step leaves the
+gateway working for the labs it already serves.
 
 | Step | Adds | Done when |
 | --- | --- | --- |
-| 1 | this repository: the gateway and its tests moved, the setup guide, the endpoint reference | the tests pass here; the RDK lab's copy is removed |
-| 2 | endpoints from the VM's proxy devices instead of three fixed names; the room check only where a room exists | the prplMesh lab and the OpenSync + EMOSA lab are reachable through the gateway |
-| 3 | one address per lab | two labs on one host are published at once: **built** (6 October), `rdk-emosa` on rev120 has its own name; two at once not shown yet |
-| 4 | the lab card and the per-host directory | a newcomer finds a free lab without asking |
-| 5 | the observer role | a second person watches a room being driven |
-| 6 | the workspace | a lab's interfaces are arranged in one window: **done** (6 October), the lab's page |
-| 7 | the queue, the suites' reservation, starting a lab on demand | two people alternate without talking to each other |
+| 1 | this repository: the gateway and its tests moved, the setup guide, the endpoint reference | the tests pass here; the RDK lab's copy is removed. **Done** but for that removal |
+| 2 | one address per lab (section 4) | **built** (6 October): `rdk-emosa` on rev120 has its own name |
+| 3 | the lab's page: the welcome, every interface in one window, admins (section 7) | **built** (6 October) |
+| 4 | rebuilds and the trusted LAN (Q3, Q4): `retarget` to a rebuilt VM; the LAN closed only for a public lab | **built** (6 October); next, the labs' builds run `retarget` themselves |
+| 5 | the team's Tailscale sign-in (Q1) | a team member opens the lab's page and is signed in |
+| 6 | programs (Q2): keys, reservations of hours, the suites' reservation | an optimizer run from a developer's machine holds a lab for an afternoon; a room suite reserves the lab instead of maintenance |
+| 7 | the other labs: endpoints from the VM's proxy devices instead of three fixed names, the room check only where a room exists | the prplMesh lab and the OpenSync + EMOSA lab are reachable through the gateway |
+| 8 | the directory across labs, from each gateway's state (section 5) | a newcomer finds a free lab without asking |
+| 9 | the observer role, the queue, starting a lab on demand (section 6) | a second person watches a room being driven; two people alternate without talking to each other |
 
 ## 9. Experiments
 
@@ -236,10 +261,9 @@ Each step leaves the gateway working for the RDK lab as it does today.
 
 ## 10. Open questions
 
-1. **The first remote users:** in-house, named partners, or anyone. It decides between
-   sharing private names and public access, and how many accounts are needed.
-2. **Accounts:** the gateway's own, per lab, as today; or one set per host; or the
-   network's identity.
+1. **The first remote users:** answered (Q1): the team now, named partners later.
+2. **Accounts:** answered (Q1): the team's Tailscale identity; the gateway's own accounts
+   for people outside the tailnet. Open: one set of those per host, shared by its labs.
 3. **Which hosts serve remote users.** A host that builds images is busy; the lab
    configurations reference notes that two labs on one host cannot build or test at once.
 4. **Operators:** whether SSH over the private network is enough, or the directory should

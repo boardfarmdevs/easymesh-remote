@@ -276,18 +276,24 @@ def check_public(config, wait=60):
             time.sleep(2)
 
 
-def publish(config, mode, confirmed=False):
+def publish(config, mode, confirmed=False, close_lan=False):
     if mode == "public" and not confirmed:
         raise ValueError("Public access requires --confirm-public. Login still remains mandatory.")
     if not json.loads(Path(config["users_file"]).read_text()):
         raise ValueError("Add at least one user before publication.")
     discovered = discover_services(config["vm"], config["services"]["topology"]["local_port"])
     if discovered != config["services"]:
-        raise ValueError("VM port forwards changed. Unpublish, stop the gateway and update its configuration first.")
+        raise ValueError(f"The VM's port forwards changed (a rebuild?): retarget --vm {config['vm']}, or the new VM.")
     current = json.loads(read_command(*tailscale(config), "serve", "status", "--json"))
     check_publication(config, current)
-    command("systemctl", "enable", "--now", f"easymesh-remote-firewall@{config['lab']}.service")
-    firewall(config, True)
+    # The lab network is trusted: the lab's ports close to it only for a public lab, or on request.
+    firewall_unit = f"easymesh-remote-firewall@{config['lab']}.service"
+    if mode == "public" or close_lan:
+        command("systemctl", "enable", "--now", firewall_unit)
+        firewall(config, True)
+    else:
+        command("systemctl", "disable", "--now", firewall_unit)
+        firewall(config, False)
     command("systemctl", "enable", "--now", f"easymesh-remote@{config['lab']}.service")
     command("systemctl", "is-active", "--quiet", f"easymesh-remote@{config['lab']}.service")
     check_gateway(config)
@@ -312,6 +318,30 @@ def publish(config, mode, confirmed=False):
         raise
     print(f"Published {mode}; login and reservation required on every application/API/stream.")
     show_urls(config)
+
+
+def retarget(config, vm, sessions):
+    """Point the lab at a rebuilt VM; its address, accounts and state stay the lab's."""
+    valid_name(vm)
+    services = discover_services(vm, config["services"]["topology"]["local_port"])
+    if [settings["local_port"] for settings in services.values()] != \
+            [settings["local_port"] for settings in config["services"].values()]:
+        raise ValueError("The gateway's listeners would move; refusing.")
+    old = config["vm"]
+    card = config.get("card", {})
+    was_maintenance = sessions.status()["maintenance"]
+    # Ends the current reservation: its views and streams belong to the old VM.
+    sessions.set_maintenance(True)
+    try:
+        config.update(vm=vm, services=services, card=lab_card(config["lab"], vm, card.get("title"), card.get("summary")))
+        save_json(CONFIG_ROOT / (config["lab"] + ".json"), config, pwd.getpwnam("easymesh-remote"))
+        if subprocess.run(["nft", "list", "table", "inet", firewall_table(config)],
+                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+            firewall(config, True)
+        command("systemctl", "try-restart", f"easymesh-remote@{config['lab']}.service")
+    finally:
+        sessions.set_maintenance(was_maintenance)
+    print(f"{config['lab']} now serves {vm} (was {old}); the next reservation waits for the handoff.")
 
 
 def unpublish(config):
@@ -431,6 +461,9 @@ def main():
     publisher = commands.add_parser("publish")
     publisher.add_argument("--mode", choices=("private", "public"), default="private")
     publisher.add_argument("--confirm-public", action="store_true")
+    publisher.add_argument("--close-lan", action="store_true", help="close the lab's ports to the LAN, private too")
+    moving = commands.add_parser("retarget", help="serve a rebuilt VM of the lab; address, accounts and state stay")
+    moving.add_argument("--vm", required=True)
     for operation in ("status", "release", "unpublish", "firewall-on", "firewall-off", "maintenance-on", "maintenance-off"):
         commands.add_parser(operation)
     args = parser.parse_args()
@@ -480,7 +513,9 @@ def main():
         else:
             own_address(config, args.name or args.lab, args.auth_key_file)
     elif args.operation == "publish":
-        publish(config, args.mode, args.confirm_public)
+        publish(config, args.mode, args.confirm_public, args.close_lan)
+    elif args.operation == "retarget":
+        retarget(config, args.vm, sessions)
     elif args.operation == "unpublish":
         unpublish(config)
     elif args.operation.startswith("firewall-"):

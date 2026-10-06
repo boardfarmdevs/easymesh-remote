@@ -110,9 +110,12 @@ files; the supplied package installer deliberately refuses unsupported hosts.
 
 ## Start private; publish publicly only deliberately
 
-**Publication blocks direct network access to this VM's three web services.**
-Ordinary LAN bookmarks for those ports stop working; use the gateway instead.
-Read the firewall section before running this on a shared host.
+**A private publication leaves the lab network as it is.** The lab network is
+trusted (the proposal's requirement Q3): LAN bookmarks and local suites keep
+working, and whoever is on the LAN reaches the lab without a reservation, so run
+local work under maintenance. `--close-lan` closes the lab's ports to the LAN all
+the same. **A public publication always closes them** (section "Direct-port
+protection").
 
 ```sh
 sudo "$REMOTE" --lab "$LAB" publish --mode private
@@ -249,7 +252,8 @@ not an attempt to isolate multiple independent experiments in one running mesh.
 
 ## Direct-port protection and local testing
 
-`publish` first enables `easymesh-remote-firewall@LAB.service`. Its dedicated
+A public `publish` (or `--close-lan`) first enables `easymesh-remote-firewall@LAB.service`; a
+private one disables it. Its dedicated
 `inet em_remote_*` nftables table drops incoming traffic to the selected host
 forward ports **before LXD DNAT**, plus direct access to the corresponding VM
 addresses/ports. It does not flush existing firewall rules, change LXD proxy
@@ -287,10 +291,22 @@ passwords, cookies or API bodies. Password replacement with `add-user` also
 revokes that user's existing sessions. Administrator release does not skip the
 handoff delay.
 
-If a VM is rebuilt with changed IPs/ports, unpublish and stop the gateway first,
-then update its configuration to the new verified proxy values. Publication
-rechecks LXD definitions rather than silently pointing at stale addresses.
-Do not add alternative LXD proxy devices around the protected endpoints.
+## After a rebuild
+
+A rebuilt lab is a new VM with new host ports and addresses (`rdk-emosa-1002`, then
+`rdk-emosa-1005`). Move the lab to it once the new VM is accepted:
+
+```sh
+sudo "$REMOTE" --lab "$LAB" retarget --vm rdk-emosa-1005
+```
+
+`retarget` reads the new VM's proxy devices, ends the current reservation (its views
+belong to the old VM), records the new VM and its build date on the lab card, moves
+the firewall to the new ports if the LAN is closed, and restarts the gateway. The
+lab's address, accounts and sessions stay; the next reservation waits for the
+handoff. Serve and Funnel are untouched: they point at the gateway, not at the VM.
+`publish` refuses a lab whose VM changed under it and names `retarget`. Do not add
+alternative LXD proxy devices around the protected endpoints.
 
 ## Stop sharing and restore LAN access
 
@@ -299,9 +315,9 @@ sudo "$REMOTE" --lab "$LAB" unpublish
 sudo systemctl disable --now "easymesh-remote@$LAB.service"
 ```
 
-Direct-port blocking deliberately remains: stopping a gateway must not expose
-unauthenticated backends. To return to the original **trusted-LAN** arrangement,
-after unpublishing:
+If the LAN was closed (a public lab, or `--close-lan`), it stays closed: stopping a
+gateway must not expose a lab that was meant to be closed. To open it again, after
+unpublishing:
 
 ```sh
 sudo systemctl disable --now "easymesh-remote-firewall@$LAB.service"
@@ -339,8 +355,9 @@ After installation, verify with two different browser profiles/accounts:
    expiry/release closes streams. Bob can reserve after the handoff countdown.
 4. Confirm the existing local room lease blocks admission, and maintenance
    blocks remote acquisition. Restore normal access afterward.
-5. From a **different machine**, verify all three old LAN ports and direct VM
-   service ports are inaccessible. Host-local diagnostics should still work.
+5. With the LAN closed (public, or `--close-lan`), verify from a **different
+   machine** that all three old LAN ports and direct VM service ports are
+   inaccessible. Host-local diagnostics should still work.
 6. Verify session persistence across a gateway restart; no native process or VM
    should restart. Check fullscreen, SSE/WebSocket reconnect and logout.
 7. Only then enable Funnel and repeat from a non-tailnet internet connection.
