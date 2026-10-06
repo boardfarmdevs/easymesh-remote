@@ -152,3 +152,9 @@ cannot be reserved as the code stands.
   `retarget --vm rdk-emosa-1005` (host ports 22010 to 22012, the VM at `10.77.171.250`), its
   address, accounts and state unchanged. Checked over the tailnet: the three interfaces of
   1005 side by side, the lab card showing the new VM and its build date.
+- rev120, 6 October afternoon: `rdk-emosa` public through Funnel (`publish --mode public
+  --confirm-public --keep-lan-open`), its LAN ports open. Public DNS had the name about
+  18 minutes after publication. Checked from rev140, outside the tailnet: valid certificates on
+  443, 8443 and 10000; 423 on every interface for an anonymous visitor; sign-in, a reservation
+  and the three interfaces for an account; no other port of the host behind the address (port
+  80 is Tailscale's relay, redirecting to HTTPS).

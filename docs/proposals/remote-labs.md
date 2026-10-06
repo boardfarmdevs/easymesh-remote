@@ -33,7 +33,7 @@ same way, and one lab has a working gateway. No step here replaces either.
 | Q2 | What do they do? | click through the interfaces now; run their own code against a lab soon (optimizer development) | programs get keys and reservations of hours; this comes before the directory across labs |
 | Q3 | Is the lab network trusted? | yes | a lab's ports close to the LAN only when it is public (or on request); local tools and suites take the reservation like everyone else |
 | Q4 | After a rebuild, which VM is the lab? | the configuration's newest accepted VM | the gateway moves to it with one command (`retarget`), ideally run by the lab's build; the lab keeps its address, accounts and state |
-| Q5 | Public access? | not until a partner asks | Funnel stays supported and untested |
+| Q5 | Public access? | not until a partner asks; **changed 6 October**: public at the owner's word | `rdk-emosa` public through Funnel since 6 October, its LAN ports kept open (`--keep-lan-open`) while local work goes on; the gateway's sign-in is the only lock, so only named accounts with strong passwords |
 
 ### Who does what
 
@@ -44,7 +44,7 @@ same way, and one lab has a working gateway. No step here replaces either.
 | An operator on the host | installs the gateway, gives a lab its address, adds people, publishes, moves the lab to a rebuilt VM, runs local work under maintenance | `manage.py` over SSH | built (`retarget` 6 October) |
 | A developer's program | reserves a lab for hours and drives its APIs | a key | Q2: next |
 | A watcher | follows a room someone else drives | the lab's page, read-only | observer role: later |
-| A partner | the same as a team member, from outside the tailnet | a shared lab device, or Funnel | Q1, Q5: later |
+| A partner | the same as a team member, from outside the tailnet | Funnel (a browser and an account), or a shared lab device | possible since 6 October: an admin adds the account on the host |
 
 ## 2. What exists
 

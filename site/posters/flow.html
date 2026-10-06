@@ -32,7 +32,8 @@
     on the host as <code>192.168.2.120:22010/1/2</code>.</p></div>
     <div class="host"><h3>rdk-emosa.&lt;tailnet&gt;.ts.net</h3><p>The lab's own address since
     6 October: a Tailscale device of the lab's, on the host, kept across rebuilds. Ports
-    <code>443</code>, <code>8443</code>, <code>10000</code>; nothing else answers on it.</p></div>
+    <code>443</code>, <code>8443</code>, <code>10000</code>; nothing else answers on it. Public
+    through Funnel since that afternoon.</p></div>
     <div class="host"><h3>easymesh-remote</h3><p>The code: <code>gateway/</code>
     (<code>gateway.py</code>, <code>manage.py</code>, the page, the units), its tests, the setup
     guide and the proposal with the requirements of 6 October.</p></div>
@@ -62,7 +63,7 @@
         <text class="b" x="32" y="284">the lab's page</text>
         <text class="t" x="32" y="304">every interface, one window</text>
         <text class="t" x="32" y="324">on the tailnet, or a shared</text>
-        <text class="t" x="32" y="342">lab device; Funnel later</text>
+        <text class="t" x="32" y="342">device; or public (Funnel)</text>
       </g>
 
       <!-- tailscale -->
@@ -73,7 +74,7 @@
         <rect class="chip" x="316" y="108" width="168" height="34" rx="8"/>
         <text class="ct" x="328" y="130">Serve · private</text>
         <rect class="chip" x="316" y="150" width="168" height="34" rx="8"/>
-        <text class="ct" x="328" y="172">Funnel · later</text>
+        <text class="ct" x="328" y="172">Funnel · public</text>
         <text class="t" x="316" y="226">HTTPS, a certificate</text>
         <text class="t" x="316" y="244">for each lab's name</text>
         <text class="t" x="316" y="270">no port forwarded</text>
@@ -311,6 +312,7 @@
         <li class="remote">The lab's page<small>the welcome with the lab card, every interface in one window, operators and admins</small></li>
         <li class="optimizer">The lab's own address<small>a Tailscale device per lab on its host; Tailscale Services would need a tagged host, Tailscale in the VM would expose the VM</small></li>
         <li class="umbrella">The requirements confirmed<small>the team first, programs soon, the lab network trusted, <code>retarget</code> after each rebuild, no public access yet</small></li>
+        <li class="optimizer">Public through Funnel (6 October)<small>at the owner's word (Q5 changed); the LAN kept open; checked from outside the tailnet: the sign-in, 423 for anyone else, nothing else of the host</small></li>
         <li class="rdk">rdk-emosa moved to its rebuild<small><code>retarget --vm rdk-emosa-1005</code>: the same address, accounts and state; 1002 stopped</small></li>
       </ul>
     </div>
@@ -321,7 +323,6 @@
         <li class="open">Programs and suites<small>step 6: keys, reservations of hours, the suites' reservation in place of maintenance</small></li>
         <li class="open">The builds run <code>retarget</code><small>rdk-emosa moved from 1002 to 1005 by hand on 6 October; a lab's build should do it</small></li>
         <li class="open">The other labs<small>step 7: prplMesh and OpenSync + EMOSA name their interfaces differently</small></li>
-        <li class="open">Funnel never tried<small>no public access until a partner asks (Q5)</small></li>
         <li class="open">The RDK lab's old copy of the gateway<small>still in meta-cmf-bananapi-vcpe, with every bug above</small></li>
       </ul>
     </div>

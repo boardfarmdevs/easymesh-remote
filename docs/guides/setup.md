@@ -137,7 +137,8 @@ sudo "$REMOTE" --lab "$LAB" publish --mode public --confirm-public
 sudo tailscale funnel status
 ```
 
-Follow Tailscale's additional Funnel consent/policy flow. Only the gateway is
+Follow Tailscale's additional Funnel consent/policy flow. The public DNS name can take
+longer than Tailscale's ten minutes: on rev120 it appeared after about 18. Only the gateway is
 exposed, including its login page. An anonymous visitor cannot read topology,
 telemetry or use controls. There is no spectator or read-only role yet: every
 account can reserve the lab and drive it.
