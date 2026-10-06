@@ -210,6 +210,36 @@ def check_gateway(config):
                 time.sleep(.2)
 
 
+def public_url(config, settings):
+    port = settings["public_port"]
+    return f"https://{config['hostname']}{'' if port == 443 else ':' + str(port)}"
+
+
+def check_public(config, wait=60):
+    # Serve's configuration can be right while another program holds the port on the Tailscale
+    # address (a web server on *:443): only a request to the public URL shows who answers.
+    # Waiting covers the certificate Tailscale fetches on first use.
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    for name, settings in config["services"].items():
+        url = public_url(config, settings) + "/_remote/status"
+        deadline = time.monotonic() + wait
+        while True:
+            try:
+                with opener.open(url, timeout=5) as response:
+                    status = json.load(response)
+                if status.get("schema") == "easymesh.remote.session.v1" and status.get("lab") == config["lab"] \
+                        and status.get("service") == name:
+                    break
+                problem = "another service answered"
+            except (urllib.error.URLError, OSError, ValueError) as error:
+                problem = str(getattr(error, "reason", error))
+            if time.monotonic() >= deadline:
+                port = settings["public_port"]
+                raise ValueError(f"{url} does not reach this gateway ({problem}). Another program may listen on "
+                                 f"port {port} of the Tailscale address: sudo ss -ltnp 'sport = :{port}'")
+            time.sleep(2)
+
+
 def publish(config, mode, confirmed=False):
     if mode == "public" and not confirmed:
         raise ValueError("Public access requires --confirm-public. Login still remains mandatory.")
@@ -239,6 +269,7 @@ def publish(config, mode, confirmed=False):
             endpoint = config["hostname"] + ":" + port
             if port not in final.get("TCP", {}) or bool(final.get("AllowFunnel", {}).get(endpoint)) != (mode == "public"):
                 raise ValueError("Tailscale publication mode did not match the requested mode.")
+        check_public(config)
     except (subprocess.SubprocessError, ValueError):
         for port in installed:
             subprocess.run(["tailscale", verb, "--https=" + port, "off"], check=False)
@@ -261,8 +292,7 @@ def unpublish(config):
 
 def show_urls(config):
     for name, settings in config["services"].items():
-        port = settings["public_port"]
-        print(f"{name}: https://{config['hostname']}{'' if port == 443 else ':' + str(port)}/_remote/")
+        print(f"{name}: {public_url(config, settings)}/_remote/")
 
 
 def main():

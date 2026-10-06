@@ -3,6 +3,7 @@ from __future__ import annotations
 import concurrent.futures
 import copy
 import importlib.util
+import io
 import json
 import os
 import shutil
@@ -11,6 +12,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import urllib.error
 from pathlib import Path
 from unittest.mock import patch
 
@@ -174,13 +176,57 @@ class SetupTests(unittest.TestCase):
                     patch.object(remote_manage, "read_command", side_effect=["{}", json.dumps(self.publication(config))]), \
                     patch.object(remote_manage, "command", side_effect=lambda *arguments: recorded.append(arguments)), \
                     patch.object(remote_manage, "firewall", side_effect=lambda *arguments: recorded.append(("firewall", True))), \
-                    patch.object(remote_manage, "check_gateway", side_effect=lambda *arguments: recorded.append(("ready",))):
+                    patch.object(remote_manage, "check_gateway", side_effect=lambda *arguments: recorded.append(("ready",))), \
+                    patch.object(remote_manage, "check_public", side_effect=lambda *arguments: recorded.append(("public",))):
                 remote_manage.publish(config, "private")
             expose = [entry for entry in recorded if entry[0] == "tailscale"]
             self.assertEqual(len(expose), 3)
             self.assertTrue(all(entry[1] == "serve" and "--bg" in entry for entry in expose))
             self.assertLess(recorded.index(("firewall", True)), recorded.index(("ready",)))
             self.assertLess(recorded.index(("ready",)), recorded.index(expose[0]))
+            self.assertEqual(recorded[-1], ("public",))
+
+    def test_publication_rolled_back_when_a_public_url_reaches_something_else(self):
+        # rev120: Apache on *:443 kept Serve from the Tailscale address's port 443.
+        with tempfile.TemporaryDirectory() as directory:
+            config = configuration(directory)
+            Path(config["users_file"]).write_text('{"alice": "test-only-hash"}')
+            with patch.object(remote_manage, "discover_services", return_value=config["services"]), \
+                    patch.object(remote_manage, "read_command", side_effect=["{}", json.dumps(self.publication(config))]), \
+                    patch.object(remote_manage, "command"), patch.object(remote_manage, "firewall"), \
+                    patch.object(remote_manage, "check_gateway"), \
+                    patch.object(remote_manage, "check_public", side_effect=ValueError("port 443 answered as another server")), \
+                    patch.object(remote_manage.subprocess, "run") as rollback:
+                with self.assertRaisesRegex(ValueError, "another server"):
+                    remote_manage.publish(config, "private")
+            self.assertEqual([entry.args[0][2] for entry in rollback.call_args_list],
+                             ["--https=443", "--https=8443", "--https=10000"])
+
+    def test_public_check_names_who_answers(self):
+        config = configuration("/tmp")
+        gateway = {name: {"schema": "easymesh.remote.session.v1", "lab": "test-lab", "service": name}
+                   for name in config["services"]}
+
+        def opener(answers):
+            def open_url(url, timeout):
+                answer = answers(url)
+                if isinstance(answer, Exception):
+                    raise answer
+                return io.BytesIO(json.dumps(answer).encode())
+            return type("Opener", (), {"open": staticmethod(open_url)})()
+
+        def by_port(url):
+            port = url.split("/")[2].partition(":")[2] or "443"
+            return next(name for name, settings in config["services"].items() if str(settings["public_port"]) == port)
+
+        with patch.object(remote_manage.urllib.request, "build_opener", return_value=opener(lambda url: gateway[by_port(url)])):
+            remote_manage.check_public(config, wait=0)
+        expired = urllib.error.URLError("certificate verify failed: certificate has expired")
+        for answers in (lambda url: expired if ":" not in url.split("/")[2] else gateway[by_port(url)],
+                        lambda url: {"other": "server"}):
+            with self.subTest(), patch.object(remote_manage.urllib.request, "build_opener", return_value=opener(answers)):
+                with self.assertRaisesRegex(ValueError, r"https://lab.test.ts.net/_remote/status does not reach this gateway.*'sport = :443'"):
+                    remote_manage.check_public(config, wait=0)
 
     def test_public_unpublish_removes_only_owned_funnels(self):
         config = configuration("/tmp")
@@ -406,7 +452,8 @@ class GatewayTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(cookie["httponly"])
         self.assertEqual(cookie["samesite"], "Strict")
         self.assertEqual(cookie["path"], "/")
-        self.assertEqual(cookie["domain"], "")
+        # A __Host- cookie must not name a domain (older aiohttp clients fill cookie["domain"] in themselves).
+        self.assertNotIn("domain=", response.headers["Set-Cookie"].lower())
         self.sessions.acquire(cookie.value)
         headers = self.headers(cookie.value)
         headers["Cookie"] += "; native=client"
@@ -420,6 +467,17 @@ class GatewayTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("Tailscale-User-Login", upstream)
         self.assertEqual(upstream["Host"], "lab.test.ts.net")
         self.assertEqual(upstream["Origin"], "https://lab.test.ts.net")
+
+    async def test_logout_ends_reservation_and_clears_cookie(self):
+        self.sessions.acquire(self.alice)
+        response = await self.clients["topology"].post("/_remote/logout", json={}, headers=self.headers())
+        self.assertEqual(response.status, 200)
+        cleared = response.headers["Set-Cookie"]
+        self.assertTrue(cleared.startswith(self.gateway.cookie + '=""') or cleared.startswith(self.gateway.cookie + "=;"))
+        for attribute in ("max-age=0", "secure", "httponly", "samesite=strict", "path=/"):
+            self.assertIn(attribute, cleared.lower())
+        self.assertFalse(self.sessions.status(self.alice)["authenticated"])
+        self.assertFalse(self.sessions.status()["busy"])
 
     async def test_views_framed_by_their_own_origin_only(self):
         # Console NG sends frame-ancestors 'none', which would keep it out of the portal.

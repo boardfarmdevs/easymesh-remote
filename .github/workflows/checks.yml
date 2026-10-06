@@ -1,6 +1,9 @@
 # The gateway's checks, without a lab: its tests (sessions, publication, the firewall in
 # disposable namespaces where the runner allows them, the proxy) and the portal's browser
 # test. The site and the documentation check: pages.yml.
+#
+# The tests run on what a lab host runs: Ubuntu's own python3-aiohttp on both supported
+# releases (the installer takes it from apt), and on the latest aiohttp from pip.
 name: checks
 on:
   push:
@@ -13,17 +16,33 @@ permissions:
 
 jobs:
   tests:
-    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {runner: ubuntu-22.04, aiohttp: apt}
+          - {runner: ubuntu-24.04, aiohttp: apt}
+          - {runner: ubuntu-24.04, aiohttp: pip}
+    runs-on: ${{ matrix.runner }}
+    name: tests (${{ matrix.runner }}, aiohttp from ${{ matrix.aiohttp }})
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - run: pip install -q aiohttp pytest
+      - name: aiohttp as a lab host has it
+        if: matrix.aiohttp == 'apt'
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q python3-aiohttp python3-pytest
+      - name: The latest aiohttp
+        if: matrix.aiohttp == 'pip'
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install -q aiohttp pytest
+          echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
+      - run: python3 -c 'import aiohttp, sys; print("aiohttp", aiohttp.__version__, "python", sys.version)'
       - name: Shell syntax
         run: bash -n gateway/install-host.sh
       - name: Tests
-        run: python -m pytest -q tests/test_remote_access.py
+        run: python3 -m pytest -q tests/test_remote_access.py
       - uses: actions/setup-node@v5
         with:
           node-version: '24'

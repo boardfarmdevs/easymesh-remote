@@ -169,7 +169,9 @@ class Gateway:
             LOGGER.info("session %s user=%s", suffix, status["username"])
         response = web.json_response(self.public_status(token, service), headers={"Cache-Control": "no-store"})
         if suffix == "logout":
-            response.del_cookie(self.cookie, path="/", secure=True, httponly=True, samesite="Strict")
+            # del_cookie takes these attributes only from aiohttp 3.10; Ubuntu ships 3.8 and 3.9.
+            response.set_cookie(self.cookie, "", max_age=0, expires="Thu, 01 Jan 1970 00:00:00 GMT",
+                                path="/", secure=True, httponly=True, samesite="Strict")
         return response
 
     async def check_room_free(self):
