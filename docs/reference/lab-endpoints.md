@@ -158,3 +158,11 @@ cannot be reserved as the code stands.
   443, 8443 and 10000; 423 on every interface for an anonymous visitor; sign-in, a reservation
   and the three interfaces for an account; no other port of the host behind the address (port
   80 is Tailscale's relay, redirecting to HTTPS).
+- rev150, 6 October evening: the gateway installed (Ubuntu 22.04, Tailscale 1.102.5) for a second
+  lab of the same configuration, `rdk-emosa-rev150` (VM `rdk-emosa-1006`, host ports 28100 to
+  28102), with its own device `rdk-emosa-rev150.<tailnet>.ts.net`, published privately; rev150
+  itself is not on the tailnet. The admin account `rob` was copied from rev120's lab (its
+  password hash and role), so one password signs in to both. Checked from rev120 over the
+  tailnet: valid certificates on the three ports, 423 for an anonymous visitor, sign-in, a
+  reservation and the three interfaces of 1006 for an account; SSH, the web and printing ports
+  and the gateway's own refused on the lab's name.
