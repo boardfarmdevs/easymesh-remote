@@ -9,6 +9,7 @@ import json
 import os
 import pwd
 import re
+import socket
 import subprocess
 import sys
 import tempfile
@@ -255,6 +256,15 @@ def check_public(config, wait=60):
     # Serve's configuration can be right while another program holds the port on the Tailscale
     # address (a web server on *:443): only a request to the public URL shows who answers.
     # Waiting covers the certificate Tailscale fetches on first use.
+    if config.get("tailscale_socket"):
+        try:
+            socket.getaddrinfo(config["hostname"], 443)
+        except socket.gaierror:
+            # A lab's own device: its ports exist only in its userspace tailscaled, so no program of
+            # the host can hold them; a host off the tailnet cannot even resolve the name (rev150).
+            print(f"Not requested from this host, which cannot resolve {config['hostname']} (it is not on the "
+                  "tailnet); the lab's own device holds its ports alone. Open it from a tailnet device.")
+            return
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
     for name, settings in config["services"].items():
         url = public_url(config, settings) + "/_remote/status"

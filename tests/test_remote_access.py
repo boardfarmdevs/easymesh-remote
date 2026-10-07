@@ -332,6 +332,20 @@ class SetupTests(unittest.TestCase):
             self.own_address([], published=json.dumps(published))
         self.assertFalse(any(call[:2] == ("systemctl", "enable") for call in self.calls))
 
+    def test_public_check_trusts_a_labs_own_device_on_a_host_off_the_tailnet(self):
+        # rev150 is not on the tailnet: it cannot resolve the lab's name, and no program of its can
+        # hold the ports of the lab's userspace device.
+        config = configuration("/tmp")
+        config["tailscale_socket"] = "/run/easymesh-remote-tailscale/test-lab/tailscaled.sock"
+        with patch.object(remote_manage.socket, "getaddrinfo", side_effect=remote_manage.socket.gaierror(-2, "unknown")), \
+                patch.object(remote_manage.urllib.request, "build_opener") as opener:
+            remote_manage.check_public(config, wait=0)
+        opener.assert_not_called()
+        config.pop("tailscale_socket")
+        with patch.object(remote_manage.socket, "getaddrinfo", side_effect=remote_manage.socket.gaierror(-2, "unknown")), \
+                self.assertRaisesRegex(ValueError, "does not reach this gateway"):
+            remote_manage.check_public(config, wait=0)
+
     def test_public_check_names_who_answers(self):
         config = configuration("/tmp")
         gateway = {name: {"schema": "easymesh.remote.session.v1", "lab": "test-lab", "service": name}
