@@ -237,7 +237,7 @@ gateway working for the labs it already serves.
 
 | Step | Adds | Done when |
 | --- | --- | --- |
-| 1 | this repository: the gateway and its tests moved, the setup guide, the endpoint reference | the tests pass here; the RDK lab's copy is removed. **Done** but for that removal |
+| 1 | this repository: the gateway and its tests moved, the setup guide, the endpoint reference | the tests pass here; the RDK lab's copy is removed. **Done** |
 | 2 | one address per lab (section 4) | **built** (6 October): `rdk-emosa` on rev120 has its own name |
 | 3 | the lab's page: the welcome, every interface in one window, admins (section 7) | **built** (6 October) |
 | 4 | rebuilds and the trusted LAN (Q3, Q4): `retarget` to a rebuilt VM; the LAN closed only for a public lab | **built** (6 October); next, the labs' builds run `retarget` themselves |

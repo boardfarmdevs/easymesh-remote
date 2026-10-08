@@ -43,10 +43,9 @@ Browser -> Tailscale HTTPS -> the gateway on the host -> the lab VM's published 
 | [site/](site) | the explainer site, and its two posters (`site/posters/`): who does what, and how a lab is reached |
 | [pages/](pages) | the site's build; the rest of the Pages workflow is the labs' shared one, in the umbrella |
 
-The gateway and its tests were brought here from the RDK lab
-([meta-cmf-bananapi-vcpe](https://vcpe.dev/meta-cmf-bananapi-vcpe/), `gen/remote-access`)
-on 2 October 2026, unchanged but for the tests' paths. The RDK lab still carries its copy
-until it is removed there.
+The gateway and its tests came from the RDK lab
+([meta-cmf-bananapi-vcpe](https://vcpe.dev/meta-cmf-bananapi-vcpe/)); this repository is
+now their only home.
 
 ## Getting started
 
