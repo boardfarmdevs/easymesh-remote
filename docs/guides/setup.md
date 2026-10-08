@@ -58,7 +58,7 @@ sudo bash gateway/install-host.sh
 sudo tailscale up
 
 LAB=rdk-emosa                      # the lab's configuration name
-VM=rdk-emosa-1002                  # its VM now
+VM=rdk-emosa-1005                  # its VM now
 REMOTE=/opt/easymesh-remote/manage.py
 sudo "$REMOTE" --lab "$LAB" configure --vm "$VM"
 sudo "$REMOTE" --lab "$LAB" add-user rob --role admin
@@ -164,7 +164,7 @@ sudo "$REMOTE" --lab "$LAB" publish --mode private
   capabilities and a read-only system. The host's own Tailscale is not touched.
 - **Its identity lives on the host** (`/var/lib/easymesh-remote-tailscale/LAB`), next to
   the gateway's state, so it survives rebuilds of the lab's VM: the lab keeps its name
-  while its VM changes from `rdk-emosa-1002` to the next build.
+  while its VM changes from `rdk-emosa-1005` to the next build.
 - **What it reaches:** userspace networking forwards an inbound connection on any port
   it does not serve itself to `127.0.0.1`, which would expose every local service of
   the host on the lab's name. The unit denies loopback to the node except the resolver
@@ -295,8 +295,8 @@ handoff delay.
 
 ## After a rebuild
 
-A rebuilt lab is a new VM with new host ports and addresses (`rdk-emosa-1002`, then
-`rdk-emosa-1005`). Move the lab to it once the new VM is accepted:
+A rebuilt lab is a new VM with new host ports and addresses (`rdk-emosa-1005`, then
+the next build's). Move the lab to it once the new VM is accepted:
 
 ```sh
 sudo "$REMOTE" --lab "$LAB" retarget --vm rdk-emosa-1005

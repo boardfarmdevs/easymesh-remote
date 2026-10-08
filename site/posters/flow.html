@@ -26,8 +26,8 @@
     remote access: the lab's Tailscale device, its gateway and its firewall, from one
     installation in <code>/opt/easymesh-remote</code>. Operators reach it over SSH.</p></div>
     <div class="host"><h3>rdk-emosa · the lab</h3><p>The RDK lab with EMOSA, named after its
-    configuration. Its VM now is <code>rdk-emosa-1005</code>, built 6 October (it replaced
-    <code>rdk-emosa-1002</code> by <code>retarget</code>): the controller's interface
+    configuration. Its VM now is <code>rdk-emosa-1005</code>; after a rebuild <code>retarget</code>
+    moves the lab to the new VM: the controller's interface
     <code>:8888</code>, Console NG <code>:8890</code>, the room <code>:8891</code>, published
     on the host as <code>192.168.2.120:22010/1/2</code>.</p></div>
     <div class="host"><h3>rdk-emosa.&lt;tailnet&gt;.ts.net</h3><p>The lab's own address since
@@ -313,7 +313,7 @@
         <li class="optimizer">The lab's own address<small>a Tailscale device per lab on its host; Tailscale Services would need a tagged host, Tailscale in the VM would expose the VM</small></li>
         <li class="umbrella">The requirements confirmed<small>the team first, programs soon, the lab network trusted, <code>retarget</code> after each rebuild, no public access yet</small></li>
         <li class="optimizer">Public through Funnel (6 October)<small>at the owner's word (Q5 changed); the LAN kept open; checked from outside the tailnet: the sign-in, 423 for anyone else, nothing else of the host</small></li>
-        <li class="rdk">rdk-emosa moved to its rebuild<small><code>retarget --vm rdk-emosa-1005</code>: the same address, accounts and state; 1002 stopped</small></li>
+        <li class="rdk">A lab moved to its rebuild<small><code>retarget --vm rdk-emosa-1005</code>: the same address, accounts and state</small></li>
       </ul>
     </div>
     <div class="panel">
@@ -321,7 +321,7 @@
       <ul class="timeline">
         <li class="open">The team's Tailscale sign-in<small>step 5: no second password for someone the tailnet already knows</small></li>
         <li class="open">Programs and suites<small>step 6: keys, reservations of hours, the suites' reservation in place of maintenance</small></li>
-        <li class="open">The builds run <code>retarget</code><small>rdk-emosa moved from 1002 to 1005 by hand on 6 October; a lab's build should do it</small></li>
+        <li class="open">The builds run <code>retarget</code><small>an operator runs it after a rebuild; a lab's build should</small></li>
         <li class="open">The other labs<small>step 7: prplMesh and OpenSync + EMOSA name their interfaces differently</small></li>
         <li class="open">The RDK lab's old copy of the gateway<small>still in meta-cmf-bananapi-vcpe, with every bug above</small></li>
       </ul>

@@ -134,35 +134,17 @@ Tailscale hostname carries one lab; `address` gives a lab a Tailscale name of it
 whether a local operator holds it (`/api/demo/interactions`), so a lab without a room
 cannot be reserved as the code stands.
 
-## 6. Checked and not checked
+## 6. Checked
 
-- No lab VM was running when this was first written. The device names, the guest ports and
-  the default host ports are read from the build scripts.
-- Tailscale on the hosts, checked on 2 October 2026: rev120 runs it; rev140 and rev150 do
-  not have it installed. No host had the gateway installed or configured then.
-- rev120, 6 October 2026: the gateway installed and published privately for `rdk-emosa`
-  (`rdk-emosa-1002`'s three proxies as in section 2, host ports 20110 to 20112, now closed
-  to the LAN by its firewall). Apache on rev120 listens on `*:443`, which holds port 443
-  of the host's own Tailscale address, so the lab was moved to a Tailscale name of its own
-  the same day, `rdk-emosa.<tailnet>.ts.net`, and published privately there. Checked over
-  the tailnet: the three interfaces side by side in the lab's page with valid certificates;
-  on the lab's name only 443, 8443 and 10000 answer, while the host's SSH, web server and
-  printing service (listening on its loopback) are refused.
-- rev120, later on 6 October: `rdk-emosa-1002` stopped; the lab moved to its rebuild with
-  `retarget --vm rdk-emosa-1005` (host ports 22010 to 22012, the VM at `10.77.171.250`), its
-  address, accounts and state unchanged. Checked over the tailnet: the three interfaces of
-  1005 side by side, the lab card showing the new VM and its build date.
-- rev120, 6 October afternoon: `rdk-emosa` public through Funnel (`publish --mode public
-  --confirm-public --keep-lan-open`), its LAN ports open. Public DNS had the name about
-  18 minutes after publication. Checked from rev140, outside the tailnet: valid certificates on
-  443, 8443 and 10000; 423 on every interface for an anonymous visitor; sign-in, a reservation
-  and the three interfaces for an account; no other port of the host behind the address (port
-  80 is Tailscale's relay, redirecting to HTTPS).
-- rev150, 6 October evening: the gateway installed (Ubuntu 22.04, Tailscale 1.102.5) for a second
-  lab of the same configuration, `rdk-emosa-rev150` (VM `rdk-emosa-1006`, host ports 28100 to
-  28102), with its own device `rdk-emosa-rev150.<tailnet>.ts.net`, published privately; rev150
-  itself is not on the tailnet. The admin account `rob` was copied from rev120's lab (its
-  password hash and role), so one password signs in to both. Checked from rev120 over the
-  tailnet: valid certificates on the three ports, 423 for an anonymous visitor, sign-in, a
-  reservation and the three interfaces of 1006 for an account; SSH, the web and printing ports
-  and the gateway's own refused on the lab's name.
+The device names, guest ports and default host ports above are read from the build scripts.
+On the two labs published today (`rdk-emosa` on rev120, public through Funnel with its LAN
+ports kept open; `rdk-emosa-rev150` on rev150, private on the tailnet), checked over the
+tailnet and, for the public one, from outside it: valid certificates on 443, 8443 and 10000;
+423 on every interface for an anonymous visitor; sign-in, a reservation and the three
+interfaces side by side for an account; on the lab's name no other port of the host answers
+(SSH, the web server, printing and the gateway's own are refused; on a public lab port 80 is
+Tailscale's relay, redirecting to HTTPS). Moving a lab to its rebuilt VM (`retarget`) keeps
+its address, accounts and state, checked on `rdk-emosa`'s move to its rebuild.
+
+Not checked: the prplMesh lab's and the OpenSync + EMOSA lab's interfaces through the gateway
+(they come with step 7 of the [proposal](../proposals/remote-labs.md)).

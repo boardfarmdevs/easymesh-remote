@@ -110,7 +110,7 @@ def discover_services(vm, local_base):
 
 
 def lab_card(lab, vm, title=None, summary=None):
-    # A configuration's VMs are named after it and their build date (rdk-emosa-1002).
+    # A configuration's VMs are named after it and their build date (rdk-emosa-1005).
     configuration = re.sub(r"-\d{4}[a-z]?$", "", lab)
     default_title, default_summary = CONFIGURATIONS.get(configuration, (lab, ""))
     data = json.loads(read_command("lxc", "query", "/1.0/instances/" + vm))

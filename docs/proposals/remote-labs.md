@@ -2,11 +2,11 @@
 
 [Documents](../README.md)
 
-**Status:** Proposal, partly built. What exists is the gateway ([setup](../guides/setup.md))
-for the RDK lab, published privately for `rdk-emosa` on rev120 since 6 October; the lab's
-page of section 7, a lab's own address of section 4, and moving a lab to its rebuilt VM
-(steps 2 to 4 of section 8, built 6 October). The requirements were confirmed on
-6 October (section 1); the rest is not implemented. **Prepared:** 2 October 2026.
+**Status:** Proposal, partly built: the gateway ([setup](../guides/setup.md)) for the RDK
+lab's layout, with the lab's page (section 7), a Tailscale name per lab (section 4) and
+moving a lab to its rebuilt VM (steps 2 to 4 of section 8). Two labs are published:
+`rdk-emosa` on rev120, public through Funnel, and `rdk-emosa-rev150` on rev150, private. The
+requirements are confirmed (section 1); steps 5 to 9 are not implemented.
 
 ## 1. The goal
 
@@ -33,7 +33,7 @@ same way, and one lab has a working gateway. No step here replaces either.
 | Q2 | What do they do? | click through the interfaces now; run their own code against a lab soon (optimizer development) | programs get keys and reservations of hours; this comes before the directory across labs |
 | Q3 | Is the lab network trusted? | yes | a lab's ports close to the LAN only when it is public (or on request); local tools and suites take the reservation like everyone else |
 | Q4 | After a rebuild, which VM is the lab? | the configuration's newest accepted VM | the gateway moves to it with one command (`retarget`), ideally run by the lab's build; the lab keeps its address, accounts and state |
-| Q5 | Public access? | not until a partner asks; **changed 6 October**: public at the owner's word | `rdk-emosa` public through Funnel since 6 October, its LAN ports kept open (`--keep-lan-open`) while local work goes on; the gateway's sign-in is the only lock, so only named accounts with strong passwords |
+| Q5 | Public access? | at the owner's word | `rdk-emosa` is public through Funnel, its LAN ports kept open (`--keep-lan-open`) while local work goes on; the gateway's sign-in is the only lock, so only named accounts with strong passwords |
 
 ### Who does what
 
@@ -41,31 +41,29 @@ same way, and one lab has a working gateway. No step here replaces either.
 | --- | --- | --- | --- |
 | A team member | opens the lab's address, sees whether it is free, reserves it, works in every interface in one window, releases it | the lab's page | built; signs in with a gateway account until Q1's Tailscale sign-in |
 | An admin | the same, and sees who is signed in, releases the lab, switches maintenance | the lab's page, **Manage** | built |
-| An operator on the host | installs the gateway, gives a lab its address, adds people, publishes, moves the lab to a rebuilt VM, runs local work under maintenance | `manage.py` over SSH | built (`retarget` 6 October) |
+| An operator on the host | installs the gateway, gives a lab its address, adds people, publishes, moves the lab to a rebuilt VM, runs local work under maintenance | `manage.py` over SSH | built |
 | A developer's program | reserves a lab for hours and drives its APIs | a key | Q2: next |
 | A watcher | follows a room someone else drives | the lab's page, read-only | observer role: later |
-| A partner | the same as a team member, from outside the tailnet | Funnel (a browser and an account), or a shared lab device | possible since 6 October: an admin adds the account on the host |
+| A partner | the same as a team member, from outside the tailnet | Funnel (a browser and an account), or a shared lab device | possible: an admin adds the account on the host |
 
 ## 2. What exists
 
 | Piece | Where | What it gives |
 | --- | --- | --- |
 | Published ports | every lab VM: LXD proxy devices | each interface on a host address and port, unauthenticated ([reference](../reference/lab-endpoints.md)) |
-| The gateway | this repository, `gateway/` | login, one exclusive reservation across a lab's interfaces, Tailscale Serve (private) or Funnel (public), a firewall for the direct ports, the lab's page: a welcome with the lab card, and every interface in one window (section 7); operator and admin accounts |
+| The gateway | this repository, `gateway/` | login, one exclusive reservation across a lab's interfaces, Tailscale Serve (private) or Funnel (public), a firewall for the direct ports, a Tailscale name per lab, the lab's page (section 7), operator and admin accounts, `retarget` to a rebuilt VM |
 | The room's own lease | the room service | one operator in the room at a time, 120 seconds at most |
-| Labs as a service | the umbrella's proposal of 26 September 2026 | a remote optimizer: an API and a Python library, on top of remote access |
 
 ## 3. What is missing
 
 | Gap | Today |
 | --- | --- |
 | Other labs | the gateway requires the RDK lab's three device names and a room |
-| More than one lab per host | built (6 October): a lab's own name (section 4); two labs at once not shown yet |
-| Rebuilds | built (6 October): `retarget` moves a lab to its rebuilt VM; the builds do not run it yet |
-| Knowing what exists | the labs poster, updated by hand |
+| Two labs on one host | each lab has its own name, but two on one host have not run together |
+| Rebuilds | the builds do not run `retarget` yet: an operator does |
+| Knowing what exists | the labs' posters and the [status page](https://vcpe.dev/easymesh-resources/lab-configurations/), updated by hand |
 | Watching without driving | every account is an operator; a second person sees only "in use" |
 | Waiting | no queue; the next person tries again |
-| One window | done (6 October): the lab's page, section 7 |
 | Suites and people | the suites do not take the reservation; an administrator switches maintenance on by hand or from the lab's page |
 
 ## 4. Accessibility
@@ -145,7 +143,7 @@ the image.
 | A person outside | none: a lab node is shared with them | | that lab only |
 | A gateway account | none: kept by the lab's gateway (`LAB.users.json`) | the person's short name, the same on every lab: `rob`, `alice` | an operator reserves and drives; an admin also releases, maintains and sees who is signed in |
 
-- **The gateway is named after the configuration** (`--lab rdk-emosa --vm rdk-emosa-1002`),
+- **The gateway is named after the configuration** (`--lab rdk-emosa --vm rdk-emosa-1005`),
   so its accounts, reservation state and Tailscale identity survive a rebuild; only
   `--vm` and the card change (`card`).
 - **Tailnet policy**, once the tailnet has more people than its owner: lab nodes tagged
@@ -254,7 +252,7 @@ gateway working for the labs it already serves.
 | | Question | How |
 | --- | --- | --- |
 | E1 | Which way gives one Tailscale name per lab with the least added to a host? | try the three in section 4 on one host with two VMs. **Decided (6 October):** a Tailscale instance per lab on the host (section 4); Services need a tagged host, Tailscale in the VM exposes the VM |
-| E2 | Do all interfaces work when framed by the portal from another port? | frame the room, the controller's interface and Console NG together, behind the gateway. **Answered (6 October), yes:** on `rdk-emosa-1002` the three ran side by side through the gateway, each on its own origin, with their streams (the room's events, the controller's and Console NG's WebSockets), once the gateway replaced Console NG's `frame-ancestors 'none'` |
+| E2 | Do all interfaces work when framed by the portal from another port? | frame the room, the controller's interface and Console NG together, behind the gateway. **Answered (6 October), yes:** in the RDK lab the three ran side by side through the gateway, each on its own origin, with their streams (the room's events, the controller's and Console NG's WebSockets), once the gateway replaced Console NG's `frame-ancestors 'none'` |
 | E3 | Which requests change state in each interface? | record a session of each, list the methods and paths |
 | E4 | How long does a lab take from stopped to usable? | start each lab VM and time it to a healthy room |
 | E5 | What does the gateway cost under a room's event stream and several observers? | one operator and ten observers on a 50-client room |
