@@ -137,9 +137,9 @@ cannot be reserved as the code stands.
 ## 6. Checked
 
 The device names, guest ports and default host ports above are read from the build scripts.
-On the two labs published today (`rdk-emosa` on rev120, public through Funnel with its LAN
-ports kept open; `rdk-emosa-rev150` on rev150, private on the tailnet), checked over the
-tailnet and, for the public one, from outside it: valid certificates on 443, 8443 and 10000;
+On the labs published (`rdk-emosa` on rev120, public through Funnel with its LAN ports kept
+open; a second lab of the same configuration on rev150, private on the tailnet, until its VM
+was removed on 8 October), checked over the tailnet and, for the public one, from outside it: valid certificates on 443, 8443 and 10000;
 423 on every interface for an anonymous visitor; sign-in, a reservation and the three
 interfaces side by side for an account; on the lab's name no other port of the host answers
 (SSH, the web server, printing and the gateway's own are refused; on a public lab port 80 is

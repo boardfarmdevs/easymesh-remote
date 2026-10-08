@@ -4,8 +4,8 @@
 
 **Status:** Proposal, partly built: the gateway ([setup](../guides/setup.md)) for the RDK
 lab's layout, with the lab's page (section 7), a Tailscale name per lab (section 4) and
-moving a lab to its rebuilt VM (steps 2 to 4 of section 8). Two labs are published:
-`rdk-emosa` on rev120, public through Funnel, and `rdk-emosa-rev150` on rev150, private. The
+moving a lab to its rebuilt VM (steps 2 to 4 of section 8). One lab is published:
+`rdk-emosa` on rev120, public through Funnel. The
 requirements are confirmed (section 1); steps 5 to 9 are not implemented.
 
 ## 1. The goal
