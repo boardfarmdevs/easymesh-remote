@@ -4,8 +4,9 @@
 
 **Status:** Proposal, partly built: the gateway ([setup](../guides/setup.md)) for the RDK
 lab's layout, with the lab's page (section 7), a Tailscale name per lab (section 4) and
-moving a lab to its rebuilt VM (steps 2 to 4 of section 8). One lab is published:
-`rdk-emosa` on rev120, public through Funnel. The
+moving a lab to its rebuilt VM (steps 2 to 4 of section 8). No lab is published since 9 October:
+`rdk-emosa` on rev120 was public through Funnel until then, unpublished at the owner's word while its
+VM is retired for the next RDK lab of record. The
 requirements are confirmed (section 1); steps 5 to 9 are not implemented.
 
 ## 1. The goal
@@ -33,7 +34,7 @@ same way, and one lab has a working gateway. No step here replaces either.
 | Q2 | What do they do? | click through the interfaces now; run their own code against a lab soon (optimizer development) | programs get keys and reservations of hours; this comes before the directory across labs |
 | Q3 | Is the lab network trusted? | yes | a lab's ports close to the LAN only when it is public (or on request); local tools and suites take the reservation like everyone else |
 | Q4 | After a rebuild, which VM is the lab? | the configuration's newest accepted VM | the gateway moves to it with one command (`retarget`), ideally run by the lab's build; the lab keeps its address, accounts and state |
-| Q5 | Public access? | at the owner's word | `rdk-emosa` is public through Funnel, its LAN ports kept open (`--keep-lan-open`) while local work goes on; the gateway's sign-in is the only lock, so only named accounts with strong passwords |
+| Q5 | Public access? | at the owner's word | `rdk-emosa` was public through Funnel until 9 October, its LAN ports kept open (`--keep-lan-open`) while local work goes on; the gateway's sign-in is the only lock, so only named accounts with strong passwords |
 
 ### Who does what
 
